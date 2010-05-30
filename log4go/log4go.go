@@ -45,10 +45,10 @@ import (
 
 // Version information
 const (
-	ELOG_VERSION = "eLog-v2.0.0"
-	ELOG_MAJOR   = 2
-	ELOG_MINOR   = 0
-	ELOG_BUILD   = 0
+	L4G_VERSION = "log4go-v1.0.0"
+	L4G_MAJOR   = 1
+	L4G_MINOR   = 0
+	L4G_BUILD   = 0
 )
 
 /****** Constants ******/

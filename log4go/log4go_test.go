@@ -13,7 +13,7 @@ import (
 
 func TestELog(test *t.T) {
 	//func newLogRecord(lv int, src string, msg string) *LogRecord {}
-	test.Logf("Testing %s", ELOG_VERSION)
+	fmt.Printf("Testing %s", L4G_VERSION)
 	lr := newLogRecord(CRITICAL, "source", "message")
 	if lr.Level != CRITICAL {
 		test.Errorf("Incorrect level: %d should be %d", lr.Level, CRITICAL)
