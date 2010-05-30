@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package elog
+package log4go
 
 import (
 	"os"
@@ -218,7 +218,8 @@ func TestXMLConfig(test *t.T) {
 	fmt.Fprintln(fd, "</logging>")
 	fd.Close()
 
-	log := LoadConfiguration(configfile)
+	log := NewLogger()
+	log.LoadConfiguration(configfile)
 	os.Remove("test.log")
 
 	// Make sure we got 2 loggers

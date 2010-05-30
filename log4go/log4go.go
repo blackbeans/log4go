@@ -33,7 +33,7 @@
 // - Have the ability to remove filters?
 // - Have GetInfoChannel, GetDebugChannel, etc return a chan string that allows for another method of logging
 // - Add an XML filter type
-package elog
+package log4go
 
 import (
 	"os"
@@ -93,23 +93,23 @@ func newLogRecord(lv int, src string, msg string) *LogRecord {
 
 // This is an interface for anything that should be able to write logs
 type LogWriter interface {
+	// This will be called to log a LogRecord message.
+	// If necessary. this function should be *INTERNALLY* synchronzied,
+	// and should spawn a separate goroutine if it could hang the program or take a long time.
+	// TODO: This may be changed to have an Init() call that returns a
+	// channel similar to <-chan *LogRecord for a more go-like internal setup
 	LogWrite(rec *LogRecord) (n int, err os.Error)
+
+	// This should return, at any given time, if the LogWriter is still in a good state.
+	// A good state is defined as having the ability to dispatch a log message immediately.
+	// if a LogWriter is not in a good state, the log message is simply not dispatched.
 	Good() bool
+
+	// This should clean up anything lingering about the LogWriter, as it is called before
+	// the LogWriter is removed.  If possible, this should guarantee that all LogWrites
+	// have been completed.
+	Close()
 }
-
-// This is the standard writer that prints to standard output
-type ConsoleLogWriter struct{}
-
-// This creates a new ConsoleLogWriter
-func NewConsoleLogWriter() *ConsoleLogWriter { return new(ConsoleLogWriter) }
-
-// This is the ConsoleLogWriter's output method
-func (slw *ConsoleLogWriter) LogWrite(rec *LogRecord) (n int, err os.Error) {
-	return fmt.Fprint(os.Stdout, "[", rec.Created.Format("01/02/06 15:04:05"), "] [", levelStrings[rec.Level], "] ", rec.Message, "\n")
-}
-
-// The standard output logger should always be writable
-func (slw *ConsoleLogWriter) Good() bool { return true }
 
 /****** Logger ******/
 
@@ -122,37 +122,53 @@ type Logger struct {
 
 // Create a new logger
 func NewLogger() *Logger {
-	l := new(Logger)
-	l.filterLevels = make(map[string]int)
-	l.filterLogWriters = make(map[string]LogWriter)
-	return l
+	log := new(Logger)
+	log.filterLevels = make(map[string]int)
+	log.filterLogWriters = make(map[string]LogWriter)
+	return log
 }
 
-// Add the standard filter
-func (l *Logger) AddFilter(name string, level int, writer LogWriter) {
+// Closes all log writers in preparation for exiting the program.
+// Calling this is not really imperative, unless you want to guarantee that all log messages are written.
+func (log *Logger) Close() {
+	// Close all open loggers
+	for key := range log.filterLogWriters {
+		log.filterLogWriters[key].Close()
+		log.filterLogWriters[key] = nil, false
+		log.filterLevels[key] = 0, false
+	}
+}
+
+// Add the standard filter.
+// This function is NOT INTERNALLY THREAD SAFE.  If you plan on
+// calling this function from multiple goroutines, you will want
+// to synchronize it yourself somehow.
+func (log *Logger) AddFilter(name string, level int, writer LogWriter) {
 	if writer == nil || !writer.Good() {
 		return
 	}
-	l.filterLevels[name] = level
-	l.filterLogWriters[name] = writer
+	log.filterLevels[name] = level
+	log.filterLogWriters[name] = writer
 }
 
 // Create a new logger with the standard stdout
 func NewConsoleLogger(level int) *Logger {
-	l := NewLogger()
-	l.AddFilter("stdout", level, new(ConsoleLogWriter))
-	return l
+	log := NewLogger()
+	log.AddFilter("stdout", level, new(ConsoleLogWriter))
+	return log
 }
 
+/******* Logging *******/
+
 // Send a log message manually
-func (l *Logger) Log(level int, source, message string) {
+func (log *Logger) Log(level int, source, message string) {
 	// Create a vector long enough to not require resizing
 	var logto vector.StringVector
-	logto.Resize(0, len(l.filterLevels))
+	logto.Resize(0, len(log.filterLevels))
 
 	// Determine if any logging will be done
-	for filt := range l.filterLevels {
-		if level >= l.filterLevels[filt] {
+	for filt := range log.filterLevels {
+		if level >= log.filterLevels[filt] {
 			logto.Push(filt)
 		}
 	}
@@ -164,20 +180,23 @@ func (l *Logger) Log(level int, source, message string) {
 
 		// Dispatch the logs
 		for _,filt := range logto {
-			l.filterLogWriters[filt].LogWrite(rec)
+			lw := log.filterLogWriters[filt]
+			if lw.Good() {
+				lw.LogWrite(rec)
+			}
 		}
 	}
 }
 
 // Send a formatted log message easily
-func (l *Logger) intLogf(level int, format string, args ...interface{}) {
+func (log *Logger) intLogf(level int, format string, args ...interface{}) {
 	// Create a vector long enough to not require resizing
 	var logto vector.StringVector
-	logto.Resize(0, len(l.filterLevels))
+	logto.Resize(0, len(log.filterLevels))
 
 	// Determine if any logging will be done
-	for filt := range l.filterLevels {
-		if level >= l.filterLevels[filt] {
+	for filt := range log.filterLevels {
+		if level >= log.filterLevels[filt] {
 			logto.Push(filt)
 		}
 	}
@@ -196,55 +215,55 @@ func (l *Logger) intLogf(level int, format string, args ...interface{}) {
 
 		// Dispatch the logs
 		for _,filt := range logto {
-			l.filterLogWriters[filt].LogWrite(rec)
+			log.filterLogWriters[filt].LogWrite(rec)
 		}
 	}
 }
 
 // Send a formatted log message easily
-func (l *Logger) Logf(level int, format string, args ...interface{}) {
-	l.intLogf(level, format, args)
+func (log *Logger) Logf(level int, format string, args ...interface{}) {
+	log.intLogf(level, format, args)
 }
 
 // Utility for finest log messages
-func (l *Logger) Finest(format string, args ...interface{}) {
-	l.intLogf(FINEST, format, args)
+func (log *Logger) Finest(format string, args ...interface{}) {
+	log.intLogf(FINEST, format, args)
 }
 
 // Utility for fine log messages
-func (l *Logger) Fine(format string, args ...interface{}) {
-	l.intLogf(FINE, format, args)
+func (log *Logger) Fine(format string, args ...interface{}) {
+	log.intLogf(FINE, format, args)
 }
 
 // Utility for debug log messages
-func (l *Logger) Debug(format string, args ...interface{}) {
-	l.intLogf(DEBUG, format, args)
+func (log *Logger) Debug(format string, args ...interface{}) {
+	log.intLogf(DEBUG, format, args)
 }
 
 // Utility for trace log messages
-func (l *Logger) Trace(format string, args ...interface{}) {
-	l.intLogf(TRACE, format, args)
+func (log *Logger) Trace(format string, args ...interface{}) {
+	log.intLogf(TRACE, format, args)
 }
 
 // Utility for info log messages
-func (l *Logger) Info(format string, args ...interface{}) {
-	l.intLogf(INFO, format, args)
+func (log *Logger) Info(format string, args ...interface{}) {
+	log.intLogf(INFO, format, args)
 }
 
 // Utility for warn log messages (returns an os.Error for easy function returns)
-func (l *Logger) Warn(format string, args ...interface{}) os.Error {
-	l.intLogf(WARNING, format, args)
+func (log *Logger) Warn(format string, args ...interface{}) os.Error {
+	log.intLogf(WARNING, format, args)
 	return os.NewError(fmt.Sprintf(format, args))
 }
 
 // Utility for error log messages (returns an os.Error for easy function returns)
-func (l *Logger) Error(format string, args ...interface{}) os.Error {
-	l.intLogf(ERROR, format, args)
+func (log *Logger) Error(format string, args ...interface{}) os.Error {
+	log.intLogf(ERROR, format, args)
 	return os.NewError(fmt.Sprintf(format, args))
 }
 
 // Utility for critical log messages (returns an os.Error for easy function returns)
-func (l *Logger) Critical(format string, args ...interface{}) os.Error {
-	l.intLogf(CRITICAL, format, args)
+func (log *Logger) Critical(format string, args ...interface{}) os.Error {
+	log.intLogf(CRITICAL, format, args)
 	return os.NewError(fmt.Sprintf(format, args))
 }

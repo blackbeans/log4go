@@ -1,11 +1,13 @@
 include $(GOROOT)/src/Make.$(GOARCH)
 
-TARG=elog
+TARG=log4go
 GOFILES=\
-	elog.go\
-	elog_config.go\
-	elog_socklog.go\
-	elog_filelog.go
+	log4go.go\
+	log4go_config.go\
+  log4go_termlog.go\
+	log4go_socklog.go\
+	log4go_filelog.go\
+  log4go_wrapper.go
 
 include $(GOROOT)/src/Make.pkg
 
