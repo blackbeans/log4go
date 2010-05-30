@@ -1,4 +1,4 @@
-Run install -d /opt/go/src/pkg/elog
-install -C src/Makefile src/elog.go src/elog_config.go src/elog_socklog.go src/elog_filelog.go src/elog_test.go /opt/go/src/pkg/elog
-cd /opt/go/src/pkg/elog && gomake install
-make[1]: Nothing to be done for `install'. in the eLog-v* directory to install into /opt/go/src/pkg
+Please see http://log4go.googlecode.com/
+
+Installation:
+- Run `goinstall log4go.googlecode.com/svn/trunk`

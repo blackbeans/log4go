@@ -1,16 +1,13 @@
-# Expected environment variables: $GOROOT
+include $(GOROOT)/src/Make.$(GOARCH)
 
-INSTALL_OPTS = -C
-INSTALL_ROOT = $(GOROOT)/src/pkg/elog
-SOURCE_FILES = src/Makefile src/elog.go src/elog_config.go src/elog_socklog.go src/elog_filelog.go src/elog_test.go
+TARG=elog
+GOFILES=\
+	elog.go\
+	elog_config.go\
+	elog_socklog.go\
+	elog_filelog.go
 
-INSTALL = install
-MAKE = gomake
+include $(GOROOT)/src/Make.pkg
 
-install :
-	$(INSTALL) -d $(INSTALL_ROOT)
-	$(INSTALL) $(INSTALL_OPTS) $(SOURCE_FILES) $(INSTALL_ROOT)
-	cd $(INSTALL_ROOT) && $(MAKE) install
-
-test : install
-	cd $(INSTALL_ROOT) && $(MAKE) test
+elogtest :
+	gotest -benchmarks=.* > /tmp/gotest && cat /tmp/gotest | grep -v WARN | grep -v INFO
