@@ -158,6 +158,7 @@ func (flw *FileLogWriter) intRotate() {
 	if flw.rotate {
 		_, err := os.Lstat(flw.filename)
 		if err == nil { // file exists
+			fmt.Fprintf(os.Stderr, "FileLogWriter.intRotate: file %s exists, searching for extension\n", flw.filename)
 			// Find the next available number
 			num := 1
 			fname := ""
@@ -167,6 +168,7 @@ func (flw *FileLogWriter) intRotate() {
 			}
 			if err != nil {
 				// Rename the file to its newfound home
+				fmt.Fprintf(os.Stderr, "FileLogWriter.intRotate: Moving %s to %s\n", flw.filename, fname)
 				os.Rename(flw.filename, fname)
 			} else {
 				fmt.Fprintf(os.Stderr, "FileLogWriter.intRotate: Cannot find free log number to rename %s\n", flw.filename)
@@ -175,7 +177,7 @@ func (flw *FileLogWriter) intRotate() {
 	}
 
 	// Open the log file
-	fd, err := os.Open(flw.filename, os.O_WRONLY|os.O_TRUNC|os.O_CREAT, 0660)
+	fd, err := os.Open(flw.filename, os.O_WRONLY|os.O_APPEND|os.O_CREAT, 0660)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "FileLogWriter.intRotate: %s\n", err)
 		return
