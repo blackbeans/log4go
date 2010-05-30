@@ -3,11 +3,11 @@ include $(GOROOT)/src/Make.$(GOARCH)
 TARG=log4go
 GOFILES=\
 	log4go.go\
-	log4go_config.go\
-  log4go_termlog.go\
-	log4go_socklog.go\
-	log4go_filelog.go\
-  log4go_wrapper.go
+	config.go\
+  termlog.go\
+	socklog.go\
+	filelog.go\
+  wrapper.go
 
 include $(GOROOT)/src/Make.pkg
 
