@@ -128,12 +128,13 @@ func (flw *FileLogWriter) Close() {
 	flw.file = nil
 }
 
-func NewFileLogWriter(fname string) *FileLogWriter {
+func NewFileLogWriter(fname string, rotate bool) *FileLogWriter {
 	flw := new(FileLogWriter)
 	flw.lock = new(sync.Mutex)
 	flw.filename = fname
 	flw.format = "[%D %T] [%L] (%S) %M"
 	flw.file = nil
+	flw.rotate = rotate
 
 	flw.intRotate() // open the file for the first time
 
@@ -158,7 +159,7 @@ func (flw *FileLogWriter) intRotate() {
 	if flw.rotate {
 		_, err := os.Lstat(flw.filename)
 		if err == nil { // file exists
-			fmt.Fprintf(os.Stderr, "FileLogWriter.intRotate: file %s exists, searching for extension\n", flw.filename)
+			//fmt.Fprintf(os.Stderr, "FileLogWriter.intRotate: file %s exists, searching for extension\n", flw.filename)
 			// Find the next available number
 			num := 1
 			fname := ""
@@ -168,10 +169,10 @@ func (flw *FileLogWriter) intRotate() {
 			}
 			if err != nil {
 				// Rename the file to its newfound home
-				fmt.Fprintf(os.Stderr, "FileLogWriter.intRotate: Moving %s to %s\n", flw.filename, fname)
+				//fmt.Fprintf(os.Stderr, "FileLogWriter.intRotate: Moving %s to %s\n", flw.filename, fname)
 				os.Rename(flw.filename, fname)
 			} else {
-				fmt.Fprintf(os.Stderr, "FileLogWriter.intRotate: Cannot find free log number to rename %s\n", flw.filename)
+				//fmt.Fprintf(os.Stderr, "FileLogWriter.intRotate: Cannot find free log number to rename %s\n", flw.filename)
 			}
 		}
 	}
@@ -179,7 +180,7 @@ func (flw *FileLogWriter) intRotate() {
 	// Open the log file
 	fd, err := os.Open(flw.filename, os.O_WRONLY|os.O_APPEND|os.O_CREAT, 0660)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "FileLogWriter.intRotate: %s\n", err)
+		//fmt.Fprintf(os.Stderr, "FileLogWriter.intRotate: %s\n", err)
 		return
 	}
 	flw.file = fd
@@ -194,30 +195,30 @@ func (flw *FileLogWriter) intRotate() {
 
 // Set the logging format
 func (flw *FileLogWriter) SetFormat(format string) {
-	fmt.Fprintf(os.Stderr, "FileLogWriter.SetFormat: %v\n", format)
+	//fmt.Fprintf(os.Stderr, "FileLogWriter.SetFormat: %v\n", format)
 	flw.format = format
 }
 
 // Set rotate at linecount
 func (flw *FileLogWriter) SetRotateLines(maxlines int) {
-	fmt.Fprintf(os.Stderr, "FileLogWriter.SetRotateLines: %v\n", maxlines)
+	//fmt.Fprintf(os.Stderr, "FileLogWriter.SetRotateLines: %v\n", maxlines)
 	flw.maxlines = maxlines
 }
 
 // Set rotate at size
 func (flw *FileLogWriter) SetRotateSize(maxsize int) {
-	fmt.Fprintf(os.Stderr, "FileLogWriter.SetRotateSize: %v\n", maxsize)
+	//fmt.Fprintf(os.Stderr, "FileLogWriter.SetRotateSize: %v\n", maxsize)
 	flw.maxsize = maxsize
 }
 
 // Set rotate daily
 func (flw *FileLogWriter) SetRotateDaily(daily bool) {
-	fmt.Fprintf(os.Stderr, "FileLogWriter.SetRotateDaily: %v\n", daily)
+	//fmt.Fprintf(os.Stderr, "FileLogWriter.SetRotateDaily: %v\n", daily)
 	flw.daily = daily
 }
 
 // Set keep old
 func (flw *FileLogWriter) SetRotate(rotate bool) {
-	fmt.Fprintf(os.Stderr, "FileLogWriter.SetRotate: %v\n", rotate)
+	//fmt.Fprintf(os.Stderr, "FileLogWriter.SetRotate: %v\n", rotate)
 	flw.rotate = rotate
 }

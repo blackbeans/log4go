@@ -47,7 +47,7 @@ func TestConsoleLogWriter(test *t.T) {
 
 func TestFileLogWriter(test *t.T) {
 	//func NewFileLogWriter(fname string, append bool) *FileLogWriter {}
-	flw := NewFileLogWriter("logtest.log")
+	flw := NewFileLogWriter("logtest.log", false)
 	rec := newLogRecord(CRITICAL, "source", "message")
 
 	if flw == nil {
@@ -286,7 +286,7 @@ func BenchmarkConsoleUtilNotLog(b *t.B) {
 func BenchmarkFileLog(b *t.B) {
 	sl := NewLogger()
 	b.StopTimer()
-	sl.AddFilter("file", INFO, NewFileLogWriter("benchlog.log"))
+	sl.AddFilter("file", INFO, NewFileLogWriter("benchlog.log", false))
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		sl.Log(WARNING, "here", "This is a log message")
@@ -298,7 +298,7 @@ func BenchmarkFileLog(b *t.B) {
 func BenchmarkFileNotLogged(b *t.B) {
 	sl := NewLogger()
 	b.StopTimer()
-	sl.AddFilter("file", INFO, NewFileLogWriter("benchlog.log"))
+	sl.AddFilter("file", INFO, NewFileLogWriter("benchlog.log", false))
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		sl.Log(DEBUG, "here", "This is a log message")
@@ -310,7 +310,7 @@ func BenchmarkFileNotLogged(b *t.B) {
 func BenchmarkFileUtilLog(b *t.B) {
 	sl := NewLogger()
 	b.StopTimer()
-	sl.AddFilter("file", INFO, NewFileLogWriter("benchlog.log"))
+	sl.AddFilter("file", INFO, NewFileLogWriter("benchlog.log",false))
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		sl.Info("%s is a log message", "This")
@@ -322,7 +322,7 @@ func BenchmarkFileUtilLog(b *t.B) {
 func BenchmarkFileUtilNotLog(b *t.B) {
 	sl := NewLogger()
 	b.StopTimer()
-	sl.AddFilter("file", INFO, NewFileLogWriter("benchlog.log"))
+	sl.AddFilter("file", INFO, NewFileLogWriter("benchlog.log",false))
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		sl.Debug("%s is a log message", "This")
