@@ -251,7 +251,7 @@ func TestXMLConfig(test *t.T) {
 		test.Errorf("XMLConfig: Expected file to have opened %s, found %s", "test.log", fname)
 	}
 
-	//os.Remove(configfile) // Keep this so that an example with the documentation is available
+	os.Rename(configfile, "../" + configfile) // Keep this so that an example with the documentation is available
 }
 
 func BenchmarkConsoleLog(b *t.B) {
