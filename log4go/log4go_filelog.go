@@ -194,25 +194,30 @@ func (flw *FileLogWriter) intRotate() {
 
 // Set the logging format
 func (flw *FileLogWriter) SetFormat(format string) {
+	fmt.Fprintf(os.Stderr, "FileLogWriter.SetFormat: %v\n", format)
 	flw.format = format
 }
 
 // Set rotate at linecount
 func (flw *FileLogWriter) SetRotateLines(maxlines int) {
+	fmt.Fprintf(os.Stderr, "FileLogWriter.SetRotateLines: %v\n", maxlines)
 	flw.maxlines = maxlines
 }
 
 // Set rotate at size
 func (flw *FileLogWriter) SetRotateSize(maxsize int) {
+	fmt.Fprintf(os.Stderr, "FileLogWriter.SetRotateSize: %v\n", maxsize)
 	flw.maxsize = maxsize
 }
 
 // Set rotate daily
 func (flw *FileLogWriter) SetRotateDaily(daily bool) {
+	fmt.Fprintf(os.Stderr, "FileLogWriter.SetRotateDaily: %v\n", daily)
 	flw.daily = daily
 }
 
 // Set keep old
 func (flw *FileLogWriter) SetRotate(rotate bool) {
+	fmt.Fprintf(os.Stderr, "FileLogWriter.SetRotate: %v\n", rotate)
 	flw.rotate = rotate
 }
