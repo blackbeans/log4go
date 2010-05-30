@@ -1,4 +1,4 @@
 Please see http://log4go.googlecode.com/
 
 Installation:
-- Run `goinstall log4go.googlecode.com/svn/trunk`
+- Run `goinstall log4go.googlecode.com/svn/trunk/log4go`
