@@ -11,10 +11,6 @@ import (
 	"json"
 )
 
-const (
-	EOM = "\n"
-)
-
 // This log writer sends output to a socket
 type SocketLogWriter struct {
 	sock net.Conn
@@ -31,15 +27,7 @@ func (slw *SocketLogWriter) LogWrite(rec *LogRecord) (int, os.Error) {
 	if err != nil { return 0, err }
 
 	// Write to socket
-	n, err := slw.sock.Write(js)
-	if err != nil {
-		return n, err
-	}
-
-	// Send End Of Message
-	m, err := slw.sock.Write([]byte(EOM))
-
-	return n+m, err
+	return slw.sock.Write(js)
 }
 
 func (slw *SocketLogWriter) Good() bool {
@@ -47,7 +35,9 @@ func (slw *SocketLogWriter) Good() bool {
 }
 
 func (slw *SocketLogWriter) Close() {
-	slw.sock.Close()
+	if slw.sock != nil && slw.sock.RemoteAddr().Network() == "tcp" {
+		slw.sock.Close()
+	}
 	slw.sock = nil
 }
 
