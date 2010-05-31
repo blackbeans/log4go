@@ -1,6 +1,6 @@
 include $(GOROOT)/src/Make.$(GOARCH)
 
-TARG=log4go
+TARG=log4go.googlecode.com/svn/stable
 GOFILES=\
 	log4go.go\
 	config.go\
