@@ -204,8 +204,8 @@ func TestXMLConfig(test *t.T) {
 	fmt.Fprintln(fd, "    -->")
 	fmt.Fprintln(fd, "    <property name=\"format\">[%D %T] [%L] (%S) %M</property>")
 	fmt.Fprintln(fd, "    <property name=\"rotate\">false</property> <!-- true enables log rotation, otherwise truncation -->")
-	fmt.Fprintln(fd, "    <property name=\"maxsize\">0</property> <!-- \\d+[KMG]? Suffixes are in terms of thousands -->")
-	fmt.Fprintln(fd, "    <property name=\"maxlines\">0</property> <!-- \\d+ [KMG]? Suffixes are in terms of 2**10 -->")
+	fmt.Fprintln(fd, "    <property name=\"maxsize\">0M</property> <!-- \\d+[KMG]? Suffixes are in terms of thousands -->")
+	fmt.Fprintln(fd, "    <property name=\"maxlines\">0K</property> <!-- \\d+[KMG]? Suffixes are in terms of 2**10 -->")
 	fmt.Fprintln(fd, "    <property name=\"daily\">false</property> <!-- Automatically rotates when a log message is written after midnight -->")
 	fmt.Fprintln(fd, "  </filter>")
 	fmt.Fprintln(fd, "  <filter enabled=\"false\"><!-- enabled=false means this logger won't actually be created -->")
@@ -251,7 +251,7 @@ func TestXMLConfig(test *t.T) {
 		test.Errorf("XMLConfig: Expected file to have opened %s, found %s", "test.log", fname)
 	}
 
-	//os.Rename(configfile, "../" + configfile) // Keep this so that an example with the documentation is available
+	os.Rename(configfile, "examples/" + configfile) // Keep this so that an example with the documentation is available
 }
 
 func BenchmarkConsoleLog(b *t.B) {
