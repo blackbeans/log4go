@@ -7,6 +7,8 @@ GOFILES=\
   termlog.go\
 	socklog.go\
 	filelog.go\
+	pattlog.go\
+	xmllog.go\
   wrapper.go
 
 include $(GOROOT)/src/Make.pkg
