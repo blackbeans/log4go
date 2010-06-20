@@ -142,32 +142,37 @@ func (flw *FileLogWriter) intRotate() {
 	flw.maxsize_cursize = 0
 }
 
-// Set the logging format
-func (flw *FileLogWriter) SetFormat(format string) {
+// Set the logging format (chainable)
+func (flw *FileLogWriter) SetFormat(format string) *FileLogWriter {
 	//fmt.Fprintf(os.Stderr, "FileLogWriter.SetFormat: %v\n", format)
 	flw.format = format
+	return flw
 }
 
-// Set rotate at linecount
-func (flw *FileLogWriter) SetRotateLines(maxlines int) {
+// Set rotate at linecount (chainable)
+func (flw *FileLogWriter) SetRotateLines(maxlines int) *FileLogWriter {
 	//fmt.Fprintf(os.Stderr, "FileLogWriter.SetRotateLines: %v\n", maxlines)
 	flw.maxlines = maxlines
+	return flw
 }
 
-// Set rotate at size
-func (flw *FileLogWriter) SetRotateSize(maxsize int) {
+// Set rotate at size (chainable)
+func (flw *FileLogWriter) SetRotateSize(maxsize int) *FileLogWriter {
 	//fmt.Fprintf(os.Stderr, "FileLogWriter.SetRotateSize: %v\n", maxsize)
 	flw.maxsize = maxsize
+	return flw
 }
 
-// Set rotate daily
-func (flw *FileLogWriter) SetRotateDaily(daily bool) {
+// Set rotate daily (chainable)
+func (flw *FileLogWriter) SetRotateDaily(daily bool) *FileLogWriter {
 	//fmt.Fprintf(os.Stderr, "FileLogWriter.SetRotateDaily: %v\n", daily)
 	flw.daily = daily
+	return flw
 }
 
-// Set keep old
-func (flw *FileLogWriter) SetRotate(rotate bool) {
+// Set keep old (chainable)
+func (flw *FileLogWriter) SetRotate(rotate bool) *FileLogWriter {
 	//fmt.Fprintf(os.Stderr, "FileLogWriter.SetRotate: %v\n", rotate)
 	flw.rotate = rotate
+	return flw
 }

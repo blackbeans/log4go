@@ -6,6 +6,9 @@ import (
 	"os"
 	"fmt"
 	"runtime"
+	"io/ioutil"
+	"crypto/md5"
+	"encoding/hex"
 	t "testing"
 )
 
@@ -153,6 +156,84 @@ func TestLogger(test *t.T) {
 	//func (l *Logger) Debug(format string, args ...interface{}) {}
 	//func (l *Logger) Trace(format string, args ...interface{}) {}
 	//func (l *Logger) Info(format string, args ...interface{}) {}
+}
+
+func TestLogOutput(test *t.T) {
+	const (
+		expected = "5d1d02513aa1d227bb762faa6b545fc1"
+	)
+
+	l := NewLogger()
+
+	// Delete and open the output log
+	os.Remove("_output.log")
+	l.AddFilter("file", FINEST, NewFileLogWriter("_output.log", false).SetFormat("[%L] '%M'"))
+
+	// Send some log messages
+	l.Log(CRITICAL, "testsrc1", l.Critical("This message is a test %d", 1).String())
+	l.Logf(ERROR, "This message is a test %s", l.Error(func()string{return "2"}))
+	l.Logf(WARNING, "This message is a test %s", l.Warn(3))
+	l.Info("This message is a test%d", 4)
+	l.Trace("This message is a test%d", 5)
+	l.Debug("This message is a test%d", 6)
+	l.Fine("This message is a test%d", 7)
+	l.Finest("This message is a test%d", 8)
+	l.Finest(9, "This message is a test")
+	l.Finest(func()string{return "This message is a test0"})
+
+	l.Close()
+
+	contents,err := ioutil.ReadFile("_output.log")
+	if err != nil {
+		test.Fatalf("Could not read output log: %s", err)
+	}
+
+	sum := md5.New()
+	sum.Write(contents)
+	sumstr := hex.EncodeToString(sum.Sum())
+	if sumstr != expected {
+		test.Fatalf("Checksum does not match: %s (expecting %s)", sumstr, expected)
+	}
+	os.Remove("_output.log")
+}
+
+func TestLogWrapperOutput(test *t.T) {
+	const (
+		expected = "5d1d02513aa1d227bb762faa6b545fc1"
+	)
+
+	Close()
+
+	// Delete and open the output log
+	os.Remove("_output.log")
+	AddFilter("file", FINEST, NewFileLogWriter("_output.log", false).SetFormat("[%L] '%M'"))
+
+	// Send some log messages
+	Log(CRITICAL, "testsrc1", Critical("This message is a test %d", 1).String())
+	Logf(ERROR, "This message is a test %s", Error(func()string{return "2"}))
+	Logf(WARNING, "This message is a test %s", Warn(3))
+	Info("This message is a test%d", 4)
+	Trace("This message is a test%d", 5)
+	Debug("This message is a test%d", 6)
+	Fine("This message is a test%d", 7)
+	Finest("This message is a test%d", 8)
+	Finest(9, "This message is a test")
+	Finest(func()string{return "This message is a test0"})
+
+	Close()
+
+	contents,err := ioutil.ReadFile("_output.log")
+	if err != nil {
+		test.Fatalf("Could not read output log: %s", err)
+	}
+
+	sum := md5.New()
+	sum.Write(contents)
+	sumstr := hex.EncodeToString(sum.Sum())
+	if sumstr != expected {
+		test.Fatalf("Checksum does not match: %s (expecting %s)", sumstr, expected)
+	}
+	os.Remove("_output.log")
 }
 
 func TestCountMallocs(test *t.T) {
