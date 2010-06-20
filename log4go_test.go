@@ -69,6 +69,32 @@ func TestFileLogWriter(test *t.T) {
 	os.Remove("logtest.log")
 }
 
+func TestXMLLogWriter(test *t.T) {
+	//func NewXMLLogWriter(fname string, append bool) *XMLLogWriter {}
+	xlw := NewXMLLogWriter("logtest.log", false)
+	rec := newLogRecord(CRITICAL, "source", "message")
+
+	if xlw == nil {
+		test.Fatalf("Invalid return: xlw should not be nil")
+	}
+
+	//func (xlw *XMLLogWriter) Good() bool {}
+	if xlw.Good() == false {
+		test.Fatalf("Invalid return: xlw should be Good")
+	}
+
+	//func (xlw *XMLLogWriter) LogWrite(rec *LogRecord) (n int, err os.Error) {}
+	if n, err := xlw.LogWrite(rec); n != 139 && err == nil {
+		test.Fatalf("Invalid return: xlw.LogWrite returned (%d,%s)", n, err)
+	}
+
+	//func (xlw *XMLLogWriter) Close() {}
+	xlw.Close()
+
+	// delete the file
+	os.Remove("logtest.log")
+}
+
 func TestLogger(test *t.T) {
 	//func NewLogger() *Logger {}
 	l := NewLogger()
@@ -201,9 +227,19 @@ func TestXMLConfig(test *t.T) {
 	fmt.Fprintln(fd, "       Recommended: \"[%D %T] [%L] (%S) %M\"")
 	fmt.Fprintln(fd, "    -->")
 	fmt.Fprintln(fd, "    <property name=\"format\">[%D %T] [%L] (%S) %M</property>")
-	fmt.Fprintln(fd, "    <property name=\"rotate\">false</property> <!-- true enables log rotation, otherwise truncation -->")
+	fmt.Fprintln(fd, "    <property name=\"rotate\">false</property> <!-- true enables log rotation, otherwise append -->")
 	fmt.Fprintln(fd, "    <property name=\"maxsize\">0M</property> <!-- \\d+[KMG]? Suffixes are in terms of thousands -->")
 	fmt.Fprintln(fd, "    <property name=\"maxlines\">0K</property> <!-- \\d+[KMG]? Suffixes are in terms of 2**10 -->")
+	fmt.Fprintln(fd, "    <property name=\"daily\">true</property> <!-- Automatically rotates when a log message is written after midnight -->")
+	fmt.Fprintln(fd, "  </filter>")
+	fmt.Fprintln(fd, "  <filter enabled=\"true\">")
+	fmt.Fprintln(fd, "    <tag>xmllog</tag>")
+	fmt.Fprintln(fd, "    <type>xml</type>")
+	fmt.Fprintln(fd, "    <level>TRACE</level>")
+	fmt.Fprintln(fd, "    <property name=\"filename\">trace.xml</property>")
+	fmt.Fprintln(fd, "    <property name=\"rotate\">true</property> <!-- true enables log rotation, otherwise append -->")
+	fmt.Fprintln(fd, "    <property name=\"maxsize\">100M</property> <!-- \\d+[KMG]? Suffixes are in terms of thousands -->")
+	fmt.Fprintln(fd, "    <property name=\"maxrecords\">6K</property> <!-- \\d+[KMG]? Suffixes are in terms of 2**10 -->")
 	fmt.Fprintln(fd, "    <property name=\"daily\">false</property> <!-- Automatically rotates when a log message is written after midnight -->")
 	fmt.Fprintln(fd, "  </filter>")
 	fmt.Fprintln(fd, "  <filter enabled=\"false\"><!-- enabled=false means this logger won't actually be created -->")
@@ -218,11 +254,10 @@ func TestXMLConfig(test *t.T) {
 
 	log := NewLogger()
 	log.LoadConfiguration(configfile)
-	os.Remove("test.log")
 
 	// Make sure we got 2 loggers
-	if len(log.filterLevels) != 2 || len(log.filterLogWriters) != 2 {
-		test.Fatalf("XMLConfig: Expected 2 filters, found %d (%d)", len(log.filterLevels), len(log.filterLogWriters))
+	if len(log.filterLevels) != 3 || len(log.filterLogWriters) != 3 {
+		test.Fatalf("XMLConfig: Expected 3 filters, found %d (%d)", len(log.filterLevels), len(log.filterLogWriters))
 	}
 
 	// Make sure they're the right type
@@ -232,6 +267,9 @@ func TestXMLConfig(test *t.T) {
 	if _,ok := log.filterLogWriters["file"].(*FileLogWriter); !ok {
 		test.Fatalf("XMLConfig: Expected file to be *FileLogWriter, found %T", log.filterLogWriters["file"])
 	}
+	if _,ok := log.filterLogWriters["xmllog"].(*XMLLogWriter); !ok {
+		test.Fatalf("XMLConfig: Expected xmllog to be *XMLLogWriter, found %T", log.filterLogWriters["xmllog"])
+	}
 
 	// Make sure levels are set
 	if lvl := log.filterLevels["stdout"]; lvl != DEBUG {
@@ -239,6 +277,9 @@ func TestXMLConfig(test *t.T) {
 	}
 	if lvl := log.filterLevels["file"]; lvl != FINEST {
 		test.Errorf("XMLConfig: Expected file to be set to level %d, found %d", FINEST, lvl)
+	}
+	if lvl := log.filterLevels["xmllog"]; lvl != TRACE {
+		test.Errorf("XMLConfig: Expected xmllog to be set to level %d, found %d", TRACE, lvl)
 	}
 
 	// Make sure the FLW is open and points to the right file
@@ -249,6 +290,19 @@ func TestXMLConfig(test *t.T) {
 		test.Errorf("XMLConfig: Expected file to have opened %s, found %s", "test.log", fname)
 	}
 
+	// Make sure the XLW is open and points to the right file
+	if ok := log.filterLogWriters["xmllog"].Good(); !ok {
+		test.Errorf("XMLConfig: Expected xmllog to have opened %s successfully, but wasn't", "trace.xml")
+	}
+	if fname := log.filterLogWriters["xmllog"].(*XMLLogWriter).file.Name(); fname != "trace.xml" {
+		test.Errorf("XMLConfig: Expected xmllog to have opened %s, found %s", "trace.xml", fname)
+	}
+
+	log.Close()
+	os.Remove("test.log")
+	os.Remove("trace.xml")
+
+	// Move XML log file
 	os.Rename(configfile, "examples/" + configfile) // Keep this so that an example with the documentation is available
 }
 

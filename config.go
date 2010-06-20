@@ -91,6 +91,8 @@ func (log *Logger) LoadConfiguration(filename string) {
 			filt, good = xmlToConsoleLogWriter(filename, xmlfilt.Property, enabled)
 		case "file":
 			filt, good = xmlToFileLogWriter(filename, xmlfilt.Property, enabled)
+		case "xml":
+			filt, good = xmlToXMLLogWriter(filename, xmlfilt.Property, enabled)
 		case "socket":
 			filt, good = xmlToSocketLogWriter(filename, xmlfilt.Property, enabled)
 		default:
@@ -145,7 +147,6 @@ func strToNumSuffix(str string, mult int) int {
 	parsed,_ := strconv.Atoi(str)
 	return parsed*num
 }
-
 func xmlToFileLogWriter(filename string, props []xmlProperty, enabled bool) (*FileLogWriter, bool) {
 	file := ""
 	format := "[%D %T] [%L] (%S) %M"
@@ -164,7 +165,7 @@ func xmlToFileLogWriter(filename string, props []xmlProperty, enabled bool) (*Fi
 		case "maxlines":
 			maxlines = strToNumSuffix(strings.Trim(prop.Value, " \r\n"), 1000)
 		case "maxsize":
-			maxlines = strToNumSuffix(strings.Trim(prop.Value, " \r\n"), 1024)
+			maxsize = strToNumSuffix(strings.Trim(prop.Value, " \r\n"), 1024)
 		case "daily":
 			daily = strings.Trim(prop.Value, " \r\n") != "false"
 		case "rotate":
@@ -191,6 +192,49 @@ func xmlToFileLogWriter(filename string, props []xmlProperty, enabled bool) (*Fi
 	flw.SetRotateSize(maxsize)
 	flw.SetRotateDaily(daily)
 	return flw, true
+}
+
+func xmlToXMLLogWriter(filename string, props []xmlProperty, enabled bool) (*XMLLogWriter, bool) {
+	file := ""
+	maxrecords := 0
+	maxsize := 0
+	daily := false
+	rotate := false
+
+	// Parse properties
+	for _,prop := range props {
+		switch prop.Name {
+		case "filename":
+			file = strings.Trim(prop.Value, " \r\n")
+		case "maxrecords":
+			maxrecords = strToNumSuffix(strings.Trim(prop.Value, " \r\n"), 1000)
+		case "maxsize":
+			maxsize = strToNumSuffix(strings.Trim(prop.Value, " \r\n"), 1024)
+		case "daily":
+			daily = strings.Trim(prop.Value, " \r\n") != "false"
+		case "rotate":
+			rotate = strings.Trim(prop.Value, " \r\n") != "false"
+		default:
+			fmt.Fprintf(os.Stderr, "LoadConfiguration: Warning: Unknown property \"%s\" for xml filter in %s\n", prop.Name, filename)
+		}
+	}
+
+	// Check properties
+	if len(file) == 0 {
+		fmt.Fprintf(os.Stderr, "LoadConfiguration: Error: Required property \"%s\" for xml filter missing in %s\n", "filename", filename)
+		return nil, false
+	}
+
+	// If it's disabled, we're just checking syntax
+	if (!enabled) {
+		return nil, true
+	}
+
+	xlw := NewXMLLogWriter(file, rotate)
+	xlw.SetRotateRecords(maxrecords)
+	xlw.SetRotateSize(maxsize)
+	xlw.SetRotateDaily(daily)
+	return xlw, true
 }
 
 func xmlToSocketLogWriter(filename string, props []xmlProperty, enabled bool) (*SocketLogWriter, bool) {
