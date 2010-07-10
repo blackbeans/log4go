@@ -35,7 +35,7 @@ func FormatLogRecord(format string, rec *LogRecord) string {
 	var ovec vector.StringVector
 
 	// Split the string into pieces by % signs
-	pieces := strings.Split(format, "%", 0)
+	pieces := strings.Split(format, "%", -1)
 	ovec.Resize(0, 2*len(pieces)+2) // allocate enough pieces for each piece and its previous plus an extra for the first and last piece for good measure
 
 	// Iterate over the pieces, replacing known formats
