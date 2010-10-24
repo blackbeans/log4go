@@ -6,3 +6,7 @@ Installation:
 Usage:
 - Add the following import:
 import l4g "log4go.googlecode.com/svn/stable"
+
+Acknowledgements:
+- pomack
+  For providing awesome patches to bring log4go up to the latest Go spec
