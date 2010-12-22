@@ -1,11 +1,11 @@
 Please see http://log4go.googlecode.com/
 
 Installation:
-- Run `goinstall log4go.googlecode.com/svn/stable`
+- Run `goinstall log4go.googlecode.com/hg`
 
 Usage:
 - Add the following import:
-import l4g "log4go.googlecode.com/svn/stable"
+import l4g "log4go.googlecode.com/hg"
 
 Acknowledgements:
 - pomack
