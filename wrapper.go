@@ -99,7 +99,7 @@ func Logf(level int, format string, args ...interface{}) {
 
 // Send a closure log message
 // Wrapper for (*Logger).Logc
-func Logc(level int, closure func()string) {
+func Logc(level int, closure func() string) {
 	Global.intLogc(level, closure)
 }
 
@@ -113,12 +113,12 @@ func Finest(arg0 interface{}, args ...interface{}) {
 	case string:
 		// Use the string as a format string
 		Global.intLogf(lvl, first, args...)
-	case func()string:
+	case func() string:
 		// Log the closure (no other arguments used)
 		Global.intLogc(lvl, first)
 	default:
 		// Build a format string so that it will be similar to Sprint
-		Global.intLogf(lvl, fmt.Sprint(arg0) + strings.Repeat(" %v", len(args)), args...)
+		Global.intLogf(lvl, fmt.Sprint(arg0)+strings.Repeat(" %v", len(args)), args...)
 	}
 }
 
@@ -132,12 +132,12 @@ func Fine(arg0 interface{}, args ...interface{}) {
 	case string:
 		// Use the string as a format string
 		Global.intLogf(lvl, first, args...)
-	case func()string:
+	case func() string:
 		// Log the closure (no other arguments used)
 		Global.intLogc(lvl, first)
 	default:
 		// Build a format string so that it will be similar to Sprint
-		Global.intLogf(lvl, fmt.Sprint(arg0) + strings.Repeat(" %v", len(args)), args...)
+		Global.intLogf(lvl, fmt.Sprint(arg0)+strings.Repeat(" %v", len(args)), args...)
 	}
 }
 
@@ -154,12 +154,12 @@ func Debug(arg0 interface{}, args ...interface{}) {
 	case string:
 		// Use the string as a format string
 		Global.intLogf(lvl, first, args...)
-	case func()string:
+	case func() string:
 		// Log the closure (no other arguments used)
 		Global.intLogc(lvl, first)
 	default:
 		// Build a format string so that it will be similar to Sprint
-		Global.intLogf(lvl, fmt.Sprint(arg0) + strings.Repeat(" %v", len(args)), args...)
+		Global.intLogf(lvl, fmt.Sprint(arg0)+strings.Repeat(" %v", len(args)), args...)
 	}
 }
 
@@ -173,12 +173,12 @@ func Trace(arg0 interface{}, args ...interface{}) {
 	case string:
 		// Use the string as a format string
 		Global.intLogf(lvl, first, args...)
-	case func()string:
+	case func() string:
 		// Log the closure (no other arguments used)
 		Global.intLogc(lvl, first)
 	default:
 		// Build a format string so that it will be similar to Sprint
-		Global.intLogf(lvl, fmt.Sprint(arg0) + strings.Repeat(" %v", len(args)), args...)
+		Global.intLogf(lvl, fmt.Sprint(arg0)+strings.Repeat(" %v", len(args)), args...)
 	}
 }
 
@@ -192,12 +192,12 @@ func Info(arg0 interface{}, args ...interface{}) {
 	case string:
 		// Use the string as a format string
 		Global.intLogf(lvl, first, args...)
-	case func()string:
+	case func() string:
 		// Log the closure (no other arguments used)
 		Global.intLogc(lvl, first)
 	default:
 		// Build a format string so that it will be similar to Sprint
-		Global.intLogf(lvl, fmt.Sprint(arg0) + strings.Repeat(" %v", len(args)), args...)
+		Global.intLogf(lvl, fmt.Sprint(arg0)+strings.Repeat(" %v", len(args)), args...)
 	}
 }
 
@@ -213,14 +213,14 @@ func Warn(arg0 interface{}, args ...interface{}) os.Error {
 		// Use the string as a format string
 		Global.intLogf(lvl, first, args...)
 		return os.NewError(fmt.Sprintf(first, args...))
-	case func()string:
+	case func() string:
 		// Log the closure (no other arguments used)
 		str := first()
 		Global.intLogf(lvl, "%s", str)
 		return os.NewError(str)
 	default:
 		// Build a format string so that it will be similar to Sprint
-		Global.intLogf(lvl, fmt.Sprint(first) + strings.Repeat(" %v", len(args)), args...)
+		Global.intLogf(lvl, fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
 		return os.NewError(fmt.Sprint(first) + fmt.Sprintf(strings.Repeat(" %v", len(args)), args...))
 	}
 	return nil
@@ -238,14 +238,14 @@ func Error(arg0 interface{}, args ...interface{}) os.Error {
 		// Use the string as a format string
 		Global.intLogf(lvl, first, args...)
 		return os.NewError(fmt.Sprintf(first, args...))
-	case func()string:
+	case func() string:
 		// Log the closure (no other arguments used)
 		str := first()
 		Global.intLogf(lvl, "%s", str)
 		return os.NewError(str)
 	default:
 		// Build a format string so that it will be similar to Sprint
-		Global.intLogf(lvl, fmt.Sprint(first) + strings.Repeat(" %v", len(args)), args...)
+		Global.intLogf(lvl, fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
 		return os.NewError(fmt.Sprint(first) + fmt.Sprintf(strings.Repeat(" %v", len(args)), args...))
 	}
 	return nil
@@ -263,14 +263,14 @@ func Critical(arg0 interface{}, args ...interface{}) os.Error {
 		// Use the string as a format string
 		Global.intLogf(lvl, first, args...)
 		return os.NewError(fmt.Sprintf(first, args...))
-	case func()string:
+	case func() string:
 		// Log the closure (no other arguments used)
 		str := first()
 		Global.intLogf(lvl, "%s", str)
 		return os.NewError(str)
 	default:
 		// Build a format string so that it will be similar to Sprint
-		Global.intLogf(lvl, fmt.Sprint(first) + strings.Repeat(" %v", len(args)), args...)
+		Global.intLogf(lvl, fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
 		return os.NewError(fmt.Sprint(first) + fmt.Sprintf(strings.Repeat(" %v", len(args)), args...))
 	}
 	return nil

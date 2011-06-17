@@ -32,10 +32,10 @@ func main() {
 	fmt.Printf("Listening to port %s...\n", *port)
 	for {
 		// read into a new buffer
-		buffer := make([]byte,1024)
+		buffer := make([]byte, 1024)
 		_, _, err := listener.ReadFrom(buffer)
 		e(err)
-		
+
 		// log to standard output
 		fmt.Println(string(buffer))
 	}

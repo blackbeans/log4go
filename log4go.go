@@ -186,14 +186,14 @@ func (log *Logger) intLogf(level int, format string, args ...interface{}) {
 		rec := newLogRecord(level, src, fmt.Sprintf(format, args...))
 
 		// Dispatch the logs
-		for _,filt := range logto {
+		for _, filt := range logto {
 			log.filterLogWriters[filt].LogWrite(rec)
 		}
 	}
 }
 
 // Send a closure log message internally
-func (log *Logger) intLogc(level int, closure func()string) {
+func (log *Logger) intLogc(level int, closure func() string) {
 	// Create a vector long enough to not require resizing
 	var logto vector.StringVector
 	logto.Resize(0, len(log.filterLevels))
@@ -218,7 +218,7 @@ func (log *Logger) intLogc(level int, closure func()string) {
 		rec := newLogRecord(level, src, closure())
 
 		// Dispatch the logs
-		for _,filt := range logto {
+		for _, filt := range logto {
 			log.filterLogWriters[filt].LogWrite(rec)
 		}
 	}
@@ -243,7 +243,7 @@ func (log *Logger) Log(level int, source, message string) {
 		rec := newLogRecord(level, source, message)
 
 		// Dispatch the logs
-		for _,filt := range logto {
+		for _, filt := range logto {
 			lw := log.filterLogWriters[filt]
 			if lw.Good() {
 				lw.LogWrite(rec)
@@ -258,7 +258,7 @@ func (log *Logger) Logf(level int, format string, args ...interface{}) {
 }
 
 // Send a closure log message
-func (log *Logger) Logc(level int, closure func()string) {
+func (log *Logger) Logc(level int, closure func() string) {
 	log.intLogc(level, closure)
 }
 
@@ -271,12 +271,12 @@ func (log *Logger) Finest(arg0 interface{}, args ...interface{}) {
 	case string:
 		// Use the string as a format string
 		log.intLogf(lvl, first, args...)
-	case func()string:
+	case func() string:
 		// Log the closure (no other arguments used)
 		log.intLogc(lvl, first)
 	default:
 		// Build a format string so that it will be similar to Sprint
-		log.intLogf(lvl, fmt.Sprint(arg0) + strings.Repeat(" %v", len(args)), args...)
+		log.intLogf(lvl, fmt.Sprint(arg0)+strings.Repeat(" %v", len(args)), args...)
 	}
 }
 
@@ -289,12 +289,12 @@ func (log *Logger) Fine(arg0 interface{}, args ...interface{}) {
 	case string:
 		// Use the string as a format string
 		log.intLogf(lvl, first, args...)
-	case func()string:
+	case func() string:
 		// Log the closure (no other arguments used)
 		log.intLogc(lvl, first)
 	default:
 		// Build a format string so that it will be similar to Sprint
-		log.intLogf(lvl, fmt.Sprint(arg0) + strings.Repeat(" %v", len(args)), args...)
+		log.intLogf(lvl, fmt.Sprint(arg0)+strings.Repeat(" %v", len(args)), args...)
 	}
 }
 
@@ -310,12 +310,12 @@ func (log *Logger) Debug(arg0 interface{}, args ...interface{}) {
 	case string:
 		// Use the string as a format string
 		log.intLogf(lvl, first, args...)
-	case func()string:
+	case func() string:
 		// Log the closure (no other arguments used)
 		log.intLogc(lvl, first)
 	default:
 		// Build a format string so that it will be similar to Sprint
-		log.intLogf(lvl, fmt.Sprint(arg0) + strings.Repeat(" %v", len(args)), args...)
+		log.intLogf(lvl, fmt.Sprint(arg0)+strings.Repeat(" %v", len(args)), args...)
 	}
 }
 
@@ -328,12 +328,12 @@ func (log *Logger) Trace(arg0 interface{}, args ...interface{}) {
 	case string:
 		// Use the string as a format string
 		log.intLogf(lvl, first, args...)
-	case func()string:
+	case func() string:
 		// Log the closure (no other arguments used)
 		log.intLogc(lvl, first)
 	default:
 		// Build a format string so that it will be similar to Sprint
-		log.intLogf(lvl, fmt.Sprint(arg0) + strings.Repeat(" %v", len(args)), args...)
+		log.intLogf(lvl, fmt.Sprint(arg0)+strings.Repeat(" %v", len(args)), args...)
 	}
 }
 
@@ -346,12 +346,12 @@ func (log *Logger) Info(arg0 interface{}, args ...interface{}) {
 	case string:
 		// Use the string as a format string
 		log.intLogf(lvl, first, args...)
-	case func()string:
+	case func() string:
 		// Log the closure (no other arguments used)
 		log.intLogc(lvl, first)
 	default:
 		// Build a format string so that it will be similar to Sprint
-		log.intLogf(lvl, fmt.Sprint(arg0) + strings.Repeat(" %v", len(args)), args...)
+		log.intLogf(lvl, fmt.Sprint(arg0)+strings.Repeat(" %v", len(args)), args...)
 	}
 }
 
@@ -366,14 +366,14 @@ func (log *Logger) Warn(arg0 interface{}, args ...interface{}) os.Error {
 		// Use the string as a format string
 		log.intLogf(lvl, first, args...)
 		return os.NewError(fmt.Sprintf(first, args...))
-	case func()string:
+	case func() string:
 		// Log the closure (no other arguments used)
 		str := first()
 		log.intLogf(lvl, "%s", str)
 		return os.NewError(str)
 	default:
 		// Build a format string so that it will be similar to Sprint
-		log.intLogf(lvl, fmt.Sprint(first) + strings.Repeat(" %v", len(args)), args...)
+		log.intLogf(lvl, fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
 		return os.NewError(fmt.Sprint(first) + fmt.Sprintf(strings.Repeat(" %v", len(args)), args...))
 	}
 	return nil
@@ -390,14 +390,14 @@ func (log *Logger) Error(arg0 interface{}, args ...interface{}) os.Error {
 		// Use the string as a format string
 		log.intLogf(lvl, first, args...)
 		return os.NewError(fmt.Sprintf(first, args...))
-	case func()string:
+	case func() string:
 		// Log the closure (no other arguments used)
 		str := first()
 		log.intLogf(lvl, "%s", str)
 		return os.NewError(str)
 	default:
 		// Build a format string so that it will be similar to Sprint
-		log.intLogf(lvl, fmt.Sprint(first) + strings.Repeat(" %v", len(args)), args...)
+		log.intLogf(lvl, fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
 		return os.NewError(fmt.Sprint(first) + fmt.Sprintf(strings.Repeat(" %v", len(args)), args...))
 	}
 	return nil
@@ -414,14 +414,14 @@ func (log *Logger) Critical(arg0 interface{}, args ...interface{}) os.Error {
 		// Use the string as a format string
 		log.intLogf(lvl, first, args...)
 		return os.NewError(fmt.Sprintf(first, args...))
-	case func()string:
+	case func() string:
 		// Log the closure (no other arguments used)
 		str := first()
 		log.intLogf(lvl, "%s", str)
 		return os.NewError(str)
 	default:
 		// Build a format string so that it will be similar to Sprint
-		log.intLogf(lvl, fmt.Sprint(first) + strings.Repeat(" %v", len(args)), args...)
+		log.intLogf(lvl, fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
 		return os.NewError(fmt.Sprint(first) + fmt.Sprintf(strings.Repeat(" %v", len(args)), args...))
 	}
 	return nil

@@ -23,4 +23,3 @@ func (slw *ConsoleLogWriter) Good() bool { return true }
 
 // The standard output logger never really closes
 func (slw *ConsoleLogWriter) Close() {}
-

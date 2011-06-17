@@ -65,7 +65,7 @@ func FormatLogRecord(format string, rec *LogRecord) string {
 		}
 	}
 
-	return strings.Join(ovec, "")+"\n"
+	return strings.Join(ovec, "") + "\n"
 }
 
 // This log writer sends output to a file
@@ -87,7 +87,7 @@ func (flw *FormatLogWriter) Good() bool {
 	return true
 }
 
-func (flw *FormatLogWriter) Close() { }
+func (flw *FormatLogWriter) Close() {}
 
 func NewFormatLogWriter(file int, format string) *FormatLogWriter {
 	flw := new(FormatLogWriter)
@@ -112,4 +112,3 @@ func (flw *FormatLogWriter) SetFormat(format string) {
 	//fmt.Fprintf(os.Stderr, "FormatLogWriter.SetFormat: %v\n", format)
 	flw.format = format
 }
-
