@@ -22,7 +22,9 @@ func (slw *SocketLogWriter) LogWrite(rec *LogRecord) (int, os.Error) {
 
 	// Marshall into JSON
 	js, err := json.Marshal(rec)
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 
 	// Write to socket
 	return slw.sock.Write(js)
@@ -40,7 +42,7 @@ func (slw *SocketLogWriter) Close() {
 }
 
 func NewSocketLogWriter(proto, hostport string) *SocketLogWriter {
-	s, err := net.Dial(proto, "", hostport)
+	s, err := net.Dial(proto, hostport)
 	slw := new(SocketLogWriter)
 
 	if err != nil || s == nil {

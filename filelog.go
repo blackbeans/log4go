@@ -16,21 +16,21 @@ type FileLogWriter struct {
 
 	// The opened file
 	filename string
-	file  *os.File
+	file     *os.File
 
 	// The logging format
 	format string
 
 	// Rotate at linecount
-	maxlines int
+	maxlines          int
 	maxlines_curlines int
 
 	// Rotate at size
-	maxsize int
+	maxsize         int
 	maxsize_cursize int
 
 	// Rotate daily
-	daily bool
+	daily          bool
 	daily_opendate int
 
 	// Keep old logfiles (.001, .002, etc)
@@ -57,7 +57,7 @@ func (flw *FileLogWriter) LogWrite(rec *LogRecord) (n int, err os.Error) {
 	}
 
 	// Perform the write
-	n,err = flw.file.Write([]byte(FormatLogRecord(flw.format, rec)))
+	n, err = flw.file.Write([]byte(FormatLogRecord(flw.format, rec)))
 
 	// Update the counts
 	if err == nil {
@@ -127,7 +127,7 @@ func (flw *FileLogWriter) intRotate() {
 	}
 
 	// Open the log file
-	fd, err := os.Open(flw.filename, os.O_WRONLY|os.O_APPEND|os.O_CREAT, 0660)
+	fd, err := os.OpenFile(flw.filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0660)
 	if err != nil {
 		//fmt.Fprintf(os.Stderr, "FileLogWriter.intRotate: %s\n", err)
 		return

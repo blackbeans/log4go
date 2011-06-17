@@ -16,18 +16,18 @@ type XMLLogWriter struct {
 
 	// The opened file
 	filename string
-	file  *os.File
+	file     *os.File
 
 	// Rotate at linecount
-	maxrecords int
+	maxrecords            int
 	maxrecords_currecords int
 
 	// Rotate at size
-	maxsize int
+	maxsize         int
 	maxsize_cursize int
 
 	// Rotate daily
-	daily bool
+	daily          bool
 	daily_opendate int
 
 	// Keep old logfiles (.001, .002, etc)
@@ -54,7 +54,7 @@ func (xlw *XMLLogWriter) LogWrite(rec *LogRecord) (n int, err os.Error) {
 	}
 
 	// Perform the write
-	n,err = xlw.file.Write([]byte(FormatLogRecord("\t<record level=\"%L\">\n\t\t<timestamp>%D %T</timestamp>\n\t\t<source>%S</source>\n\t\t<message>%M</message>\n\t</record>\n", rec)))
+	n, err = xlw.file.Write([]byte(FormatLogRecord("\t<record level=\"%L\">\n\t\t<timestamp>%D %T</timestamp>\n\t\t<source>%S</source>\n\t\t<message>%M</message>\n\t</record>\n", rec)))
 
 	// Update the counts
 	if err == nil {
@@ -125,14 +125,14 @@ func (xlw *XMLLogWriter) intRotate() {
 	}
 
 	// Open the log file
-	fd, err := os.Open(xlw.filename, os.O_WRONLY|os.O_APPEND|os.O_CREAT, 0660)
+	fd, err := os.OpenFile(xlw.filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0660)
 	if err != nil {
 		return
 	}
 	xlw.file = fd
 
 	// Write the closing tag
-	xlw.file.Write([]byte("<log created=\""+time.LocalTime().Format("2006/01/02 15:04:05 MST")+"\">\n"))
+	xlw.file.Write([]byte("<log created=\"" + time.LocalTime().Format("2006/01/02 15:04:05 MST") + "\">\n"))
 
 	// Set the daily open date to the current date
 	xlw.daily_opendate = time.LocalTime().Day

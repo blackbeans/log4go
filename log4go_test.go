@@ -110,7 +110,7 @@ func TestLogger(test *t.T) {
 	if sl == nil {
 		test.Fatalf("NewConsoleLogger should never return nil")
 	}
-	if lw,exist := sl.filterLogWriters["stdout"]; lw == nil || exist != true {
+	if lw, exist := sl.filterLogWriters["stdout"]; lw == nil || exist != true {
 		test.Fatalf("NewConsoleLogger produced invalid logger (DNE or nil)")
 	}
 	if sl.filterLevels["stdout"] != WARNING {
@@ -122,7 +122,7 @@ func TestLogger(test *t.T) {
 
 	//func (l *Logger) AddFilter(name string, level int, writer LogWriter) {}
 	l.AddFilter("stdout", DEBUG, NewConsoleLogWriter())
-	if lw,exist := l.filterLogWriters["stdout"]; lw == nil || exist != true {
+	if lw, exist := l.filterLogWriters["stdout"]; lw == nil || exist != true {
 		test.Fatalf("AddFilter produced invalid logger (DNE or nil)")
 	}
 	if l.filterLevels["stdout"] != DEBUG {
@@ -171,7 +171,7 @@ func TestLogOutput(test *t.T) {
 
 	// Send some log messages
 	l.Log(CRITICAL, "testsrc1", l.Critical("This message is a test %d", 1).String())
-	l.Logf(ERROR, "This message is a test %s", l.Error(func()string{return "2"}))
+	l.Logf(ERROR, "This message is a test %s", l.Error(func() string { return "2" }))
 	l.Logf(WARNING, "This message is a test %s", l.Warn(3))
 	l.Info("This message is a test%d", 4)
 	l.Trace("This message is a test%d", 5)
@@ -179,11 +179,11 @@ func TestLogOutput(test *t.T) {
 	l.Fine("This message is a test%d", 7)
 	l.Finest("This message is a test%d", 8)
 	l.Finest(9, "This message is a test")
-	l.Finest(func()string{return "This message is a test0"})
+	l.Finest(func() string { return "This message is a test0" })
 
 	l.Close()
 
-	contents,err := ioutil.ReadFile("_output.log")
+	contents, err := ioutil.ReadFile("_output.log")
 	if err != nil {
 		test.Fatalf("Could not read output log: %s", err)
 	}
@@ -210,7 +210,7 @@ func TestLogWrapperOutput(test *t.T) {
 
 	// Send some log messages
 	Log(CRITICAL, "testsrc1", Critical("This message is a test %d", 1).String())
-	Logf(ERROR, "This message is a test %s", Error(func()string{return "2"}))
+	Logf(ERROR, "This message is a test %s", Error(func() string { return "2" }))
 	Logf(WARNING, "This message is a test %s", Warn(3))
 	Info("This message is a test%d", 4)
 	Trace("This message is a test%d", 5)
@@ -218,11 +218,11 @@ func TestLogWrapperOutput(test *t.T) {
 	Fine("This message is a test%d", 7)
 	Finest("This message is a test%d", 8)
 	Finest(9, "This message is a test")
-	Finest(func()string{return "This message is a test0"})
+	Finest(func() string { return "This message is a test0" })
 
 	Close()
 
-	contents,err := ioutil.ReadFile("_output.log")
+	contents, err := ioutil.ReadFile("_output.log")
 	if err != nil {
 		test.Fatalf("Could not read output log: %s", err)
 	}
@@ -279,7 +279,7 @@ func TestXMLConfig(test *t.T) {
 		configfile = "example.xml"
 	)
 
-	fd, err := os.Open(configfile, os.O_WRONLY | os.O_TRUNC | os.O_CREATE, 0666)
+	fd, err := os.Create(configfile)
 	if err != nil {
 		test.Fatalf("Could not open %s for writing: %s", configfile, err)
 	}
@@ -342,13 +342,13 @@ func TestXMLConfig(test *t.T) {
 	}
 
 	// Make sure they're the right type
-	if _,ok := log.filterLogWriters["stdout"].(*ConsoleLogWriter); !ok {
+	if _, ok := log.filterLogWriters["stdout"].(*ConsoleLogWriter); !ok {
 		test.Errorf("XMLConfig: Expected stdout to be *ConsoleLogWriter, found %T", log.filterLogWriters["stdout"])
 	}
-	if _,ok := log.filterLogWriters["file"].(*FileLogWriter); !ok {
+	if _, ok := log.filterLogWriters["file"].(*FileLogWriter); !ok {
 		test.Fatalf("XMLConfig: Expected file to be *FileLogWriter, found %T", log.filterLogWriters["file"])
 	}
-	if _,ok := log.filterLogWriters["xmllog"].(*XMLLogWriter); !ok {
+	if _, ok := log.filterLogWriters["xmllog"].(*XMLLogWriter); !ok {
 		test.Fatalf("XMLConfig: Expected xmllog to be *XMLLogWriter, found %T", log.filterLogWriters["xmllog"])
 	}
 
@@ -384,7 +384,7 @@ func TestXMLConfig(test *t.T) {
 	os.Remove("trace.xml")
 
 	// Move XML log file
-	os.Rename(configfile, "examples/" + configfile) // Keep this so that an example with the documentation is available
+	os.Rename(configfile, "examples/"+configfile) // Keep this so that an example with the documentation is available
 }
 
 func BenchmarkConsoleLog(b *t.B) {
@@ -443,7 +443,7 @@ func BenchmarkFileNotLogged(b *t.B) {
 func BenchmarkFileUtilLog(b *t.B) {
 	sl := NewLogger()
 	b.StopTimer()
-	sl.AddFilter("file", INFO, NewFileLogWriter("benchlog.log",false))
+	sl.AddFilter("file", INFO, NewFileLogWriter("benchlog.log", false))
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		sl.Info("%s is a log message", "This")
@@ -455,7 +455,7 @@ func BenchmarkFileUtilLog(b *t.B) {
 func BenchmarkFileUtilNotLog(b *t.B) {
 	sl := NewLogger()
 	b.StopTimer()
-	sl.AddFilter("file", INFO, NewFileLogWriter("benchlog.log",false))
+	sl.AddFilter("file", INFO, NewFileLogWriter("benchlog.log", false))
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		sl.Debug("%s is a log message", "This")

@@ -11,15 +11,15 @@ import (
 )
 
 type xmlProperty struct {
-	Name string "attr"
+	Name  string "attr"
 	Value string "chardata"
 }
 
 type xmlFilter struct {
-	Enabled string "attr"
-	Tag string
-	Level string
-	Type string
+	Enabled  string "attr"
+	Tag      string
+	Level    string
+	Type     string
 	Property []xmlProperty
 }
 
@@ -32,7 +32,7 @@ func (log *Logger) LoadConfiguration(filename string) {
 	log.Close()
 
 	// Open the configuration file
-	fd, err := os.Open(filename, os.O_RDONLY, 0)
+	fd, err := os.Open(filename)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "LoadConfiguration: Error:  Could not open %s for reading: %s\n", filename, err)
 		os.Exit(1)
@@ -48,7 +48,7 @@ func (log *Logger) LoadConfiguration(filename string) {
 	for _, xmlfilt := range xc.Filter {
 		var filt LogWriter
 		var level int
-		bad,good,enabled := false, true, false
+		bad, good, enabled := false, true, false
 
 		// Check required children
 		if len(xmlfilt.Enabled) == 0 {
@@ -71,21 +71,31 @@ func (log *Logger) LoadConfiguration(filename string) {
 		}
 
 		switch xmlfilt.Level {
-		case "FINEST":   level = FINEST
-		case "FINE":     level = FINE
-		case "DEBUG":    level = DEBUG
-		case "TRACE":    level = TRACE
-		case "INFO":     level = INFO
-		case "WARNING":  level = WARNING
-		case "ERROR":    level = ERROR
-		case "CRITICAL": level = CRITICAL
+		case "FINEST":
+			level = FINEST
+		case "FINE":
+			level = FINE
+		case "DEBUG":
+			level = DEBUG
+		case "TRACE":
+			level = TRACE
+		case "INFO":
+			level = INFO
+		case "WARNING":
+			level = WARNING
+		case "ERROR":
+			level = ERROR
+		case "CRITICAL":
+			level = CRITICAL
 		default:
 			fmt.Fprintf(os.Stderr, "LoadConfiguration: Error: Required child <%s> for filter has unknown value in %s\n", "level", filename)
 			bad = true
 		}
 
 		// Just so all of the required attributes are errored at the same time if missing
-		if bad { os.Exit(1) }
+		if bad {
+			os.Exit(1)
+		}
 
 		switch xmlfilt.Type {
 		case "console":
@@ -102,10 +112,14 @@ func (log *Logger) LoadConfiguration(filename string) {
 		}
 
 		// Just so all of the required params are errored at the same time if wrong
-		if !good { os.Exit(1) }
+		if !good {
+			os.Exit(1)
+		}
 
 		// If we're disabled (syntax and correctness checks only), don't add to logger
-		if !enabled { continue }
+		if !enabled {
+			continue
+		}
 
 		log.filterLevels[xmlfilt.Tag] = level
 		log.filterLogWriters[xmlfilt.Tag] = filt
@@ -114,15 +128,15 @@ func (log *Logger) LoadConfiguration(filename string) {
 
 func xmlToConsoleLogWriter(filename string, props []xmlProperty, enabled bool) (*ConsoleLogWriter, bool) {
 	// Parse properties
-	for _,prop := range props {
+	for _, prop := range props {
 		switch prop.Name {
 		default:
-			fmt.Fprintf(os.Stderr, "LoadConfiguration: Warning: Unknown property \"%s\" for console filter in %s\n",  prop.Name, filename)
+			fmt.Fprintf(os.Stderr, "LoadConfiguration: Warning: Unknown property \"%s\" for console filter in %s\n", prop.Name, filename)
 		}
 	}
 
 	// If it's disabled, we're just checking syntax
-	if (!enabled) {
+	if !enabled {
 		return nil, true
 	}
 
@@ -142,11 +156,11 @@ func strToNumSuffix(str string, mult int) int {
 			fallthrough
 		case 'K', 'k':
 			num *= mult
-			str = str[0:len(str)-1]
+			str = str[0 : len(str)-1]
 		}
 	}
-	parsed,_ := strconv.Atoi(str)
-	return parsed*num
+	parsed, _ := strconv.Atoi(str)
+	return parsed * num
 }
 func xmlToFileLogWriter(filename string, props []xmlProperty, enabled bool) (*FileLogWriter, bool) {
 	file := ""
@@ -157,7 +171,7 @@ func xmlToFileLogWriter(filename string, props []xmlProperty, enabled bool) (*Fi
 	rotate := false
 
 	// Parse properties
-	for _,prop := range props {
+	for _, prop := range props {
 		switch prop.Name {
 		case "filename":
 			file = strings.Trim(prop.Value, " \r\n")
@@ -183,7 +197,7 @@ func xmlToFileLogWriter(filename string, props []xmlProperty, enabled bool) (*Fi
 	}
 
 	// If it's disabled, we're just checking syntax
-	if (!enabled) {
+	if !enabled {
 		return nil, true
 	}
 
@@ -203,7 +217,7 @@ func xmlToXMLLogWriter(filename string, props []xmlProperty, enabled bool) (*XML
 	rotate := false
 
 	// Parse properties
-	for _,prop := range props {
+	for _, prop := range props {
 		switch prop.Name {
 		case "filename":
 			file = strings.Trim(prop.Value, " \r\n")
@@ -227,7 +241,7 @@ func xmlToXMLLogWriter(filename string, props []xmlProperty, enabled bool) (*XML
 	}
 
 	// If it's disabled, we're just checking syntax
-	if (!enabled) {
+	if !enabled {
 		return nil, true
 	}
 
@@ -243,7 +257,7 @@ func xmlToSocketLogWriter(filename string, props []xmlProperty, enabled bool) (*
 	protocol := "udp"
 
 	// Parse properties
-	for _,prop := range props {
+	for _, prop := range props {
 		switch prop.Name {
 		case "endpoint":
 			endpoint = strings.Trim(prop.Value, " \r\n")
@@ -261,7 +275,7 @@ func xmlToSocketLogWriter(filename string, props []xmlProperty, enabled bool) (*
 	}
 
 	// If it's disabled, we're just checking syntax
-	if (!enabled) {
+	if !enabled {
 		return nil, true
 	}
 

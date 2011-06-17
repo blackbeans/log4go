@@ -39,7 +39,7 @@ func main() {
 	log.Close()
 
 	// Print what was logged to the file (yes, I know I'm skipping error checking)
-	fd, _ := os.Open(filename, os.O_RDONLY, 0)
+	fd, _ := os.Open(filename)
 	in := bufio.NewReader(fd)
 	fmt.Print("Messages logged to file were: (line numbers not included)\n")
 	for lineno := 1; ; lineno++ {
