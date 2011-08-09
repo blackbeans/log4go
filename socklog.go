@@ -10,45 +10,48 @@ import (
 )
 
 // This log writer sends output to a socket
-type SocketLogWriter struct {
-	sock net.Conn
-}
+type SocketLogWriter chan *LogRecord
 
 // This is the SocketLogWriter's output method
-func (slw *SocketLogWriter) LogWrite(rec *LogRecord) (int, os.Error) {
-	if !slw.Good() {
-		return -1, os.NewError("Socket was not opened successfully")
-	}
+func (w SocketLogWriter) LogWrite(rec *LogRecord) {
+	w <- rec
+}
 
-	// Marshall into JSON
-	js, err := json.Marshal(rec)
+func (w SocketLogWriter) Close() {
+	close(w)
+}
+
+func NewSocketLogWriter(proto, hostport string) SocketLogWriter {
+	sock, err := net.Dial(proto, hostport)
 	if err != nil {
-		return 0, err
+		fmt.Fprintf(os.Stderr, "NewSocketLogWriter(%q): %s\n", hostport, err)
+		return nil
 	}
 
-	// Write to socket
-	return slw.sock.Write(js)
-}
+	w := SocketLogWriter(make(chan *LogRecord, LogBufferLength))
 
-func (slw *SocketLogWriter) Good() bool {
-	return slw.sock != nil
-}
+	go func() {
+		defer func() {
+			if sock != nil && proto == "tcp" {
+				sock.Close()
+			}
+		}()
 
-func (slw *SocketLogWriter) Close() {
-	if slw.sock != nil && slw.sock.RemoteAddr().Network() == "tcp" {
-		slw.sock.Close()
-	}
-	slw.sock = nil
-}
+		for rec := range w {
+			// Marshall into JSON
+			js, err := json.Marshal(rec)
+			if err != nil {
+				fmt.Fprint(os.Stderr, "SocketLogWriter(%q): %s", hostport, err)
+				return
+			}
 
-func NewSocketLogWriter(proto, hostport string) *SocketLogWriter {
-	s, err := net.Dial(proto, hostport)
-	slw := new(SocketLogWriter)
+			_, err = sock.Write(js)
+			if err != nil {
+				fmt.Fprint(os.Stderr, "SocketLogWriter(%q): %s", hostport, err)
+				return
+			}
+		}
+	}()
 
-	if err != nil || s == nil {
-		fmt.Fprintf(os.Stderr, "NewSocketLogWriter: %s\n", err)
-	}
-
-	slw.sock = s
-	return slw
+	return w
 }

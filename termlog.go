@@ -3,23 +3,42 @@
 package log4go
 
 import (
+	"io"
 	"os"
 	"fmt"
 )
 
-// This is the standard writer that prints to standard output
-type ConsoleLogWriter struct{}
+// This is the standard writer that prints to standard output.
+type ConsoleLogWriter chan *LogRecord
 
 // This creates a new ConsoleLogWriter
-func NewConsoleLogWriter() *ConsoleLogWriter { return new(ConsoleLogWriter) }
-
-// This is the ConsoleLogWriter's output method
-func (slw *ConsoleLogWriter) LogWrite(rec *LogRecord) (n int, err os.Error) {
-	return fmt.Fprint(os.Stdout, "[", rec.Created.Format("01/02/06 15:04:05"), "] [", levelStrings[rec.Level], "] ", rec.Message, "\n")
+func NewConsoleLogWriter() ConsoleLogWriter {
+	records := make(ConsoleLogWriter, LogBufferLength)
+	go records.run(os.Stdout)
+	return records
 }
 
-// The standard output logger should always be writable
-func (slw *ConsoleLogWriter) Good() bool { return true }
+func (w ConsoleLogWriter) run(out io.Writer) {
+	var timestr string
+	var timestrAt int64
 
-// The standard output logger never really closes
-func (slw *ConsoleLogWriter) Close() {}
+	for rec := range w {
+		if rec.Created != timestrAt {
+			tm := TimeConversionFunction(rec.Created/1e9)
+			timestr, timestrAt = tm.Format("01/02/06 15:04:05"), rec.Created/1e9
+		}
+		fmt.Fprint(out, "[", timestr, "] [", levelStrings[rec.Level], "] ", rec.Message, "\n")
+	}
+}
+
+// This is the ConsoleLogWriter's output method.  This will block if the output
+// buffer is full.
+func (w ConsoleLogWriter) LogWrite(rec *LogRecord) {
+	w <- rec
+}
+
+// Close stops the logger from sending messages to standard output.  Attempts to
+// send log messages to this logger after a Close have undefined behavior.
+func (w ConsoleLogWriter) Close() {
+	close(w)
+}

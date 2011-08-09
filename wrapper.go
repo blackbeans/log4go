@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	Global *Logger
+	Global Logger
 )
 
 func init() {
@@ -22,8 +22,8 @@ func LoadConfiguration(filename string) {
 }
 
 // Wrapper for (*Logger).AddFilter
-func AddFilter(name string, level int, writer LogWriter) {
-	Global.AddFilter(name, level, writer)
+func AddFilter(name string, lvl level, writer LogWriter) {
+	Global.AddFilter(name, lvl, writer)
 }
 
 // Wrapper for (*Logger).Close (closes and removes all logwriters)
@@ -87,20 +87,20 @@ func Stdoutf(format string, args ...interface{}) {
 
 // Send a log message manually
 // Wrapper for (*Logger).Log
-func Log(level int, source, message string) {
-	Global.Log(level, source, message)
+func Log(lvl level, source, message string) {
+	Global.Log(lvl, source, message)
 }
 
 // Send a formatted log message easily
 // Wrapper for (*Logger).Logf
-func Logf(level int, format string, args ...interface{}) {
-	Global.intLogf(level, format, args...)
+func Logf(lvl level, format string, args ...interface{}) {
+	Global.intLogf(lvl, format, args...)
 }
 
 // Send a closure log message
 // Wrapper for (*Logger).Logc
-func Logc(level int, closure func() string) {
-	Global.intLogc(level, closure)
+func Logc(lvl level, closure func() string) {
+	Global.intLogc(lvl, closure)
 }
 
 // Utility for finest log messages (see Debug() for parameter explanation)

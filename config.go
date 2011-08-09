@@ -28,7 +28,7 @@ type xmlLoggerConfig struct {
 }
 
 // Load XML configuration; see examples/example.xml for documentation
-func (log *Logger) LoadConfiguration(filename string) {
+func (log Logger) LoadConfiguration(filename string) {
 	log.Close()
 
 	// Open the configuration file
@@ -47,7 +47,7 @@ func (log *Logger) LoadConfiguration(filename string) {
 
 	for _, xmlfilt := range xc.Filter {
 		var filt LogWriter
-		var level int
+		var lvl level
 		bad, good, enabled := false, true, false
 
 		// Check required children
@@ -72,23 +72,23 @@ func (log *Logger) LoadConfiguration(filename string) {
 
 		switch xmlfilt.Level {
 		case "FINEST":
-			level = FINEST
+			lvl = FINEST
 		case "FINE":
-			level = FINE
+			lvl = FINE
 		case "DEBUG":
-			level = DEBUG
+			lvl = DEBUG
 		case "TRACE":
-			level = TRACE
+			lvl = TRACE
 		case "INFO":
-			level = INFO
+			lvl = INFO
 		case "WARNING":
-			level = WARNING
+			lvl = WARNING
 		case "ERROR":
-			level = ERROR
+			lvl = ERROR
 		case "CRITICAL":
-			level = CRITICAL
+			lvl = CRITICAL
 		default:
-			fmt.Fprintf(os.Stderr, "LoadConfiguration: Error: Required child <%s> for filter has unknown value in %s\n", "level", filename)
+			fmt.Fprintf(os.Stderr, "LoadConfiguration: Error: Required child <%s> for filter has unknown value in %s: %s\n", "level", filename, xmlfilt.Level)
 			bad = true
 		}
 
@@ -121,12 +121,11 @@ func (log *Logger) LoadConfiguration(filename string) {
 			continue
 		}
 
-		log.filterLevels[xmlfilt.Tag] = level
-		log.filterLogWriters[xmlfilt.Tag] = filt
+		log[xmlfilt.Tag] = &Filter{lvl,filt}
 	}
 }
 
-func xmlToConsoleLogWriter(filename string, props []xmlProperty, enabled bool) (*ConsoleLogWriter, bool) {
+func xmlToConsoleLogWriter(filename string, props []xmlProperty, enabled bool) (ConsoleLogWriter, bool) {
 	// Parse properties
 	for _, prop := range props {
 		switch prop.Name {
@@ -209,7 +208,7 @@ func xmlToFileLogWriter(filename string, props []xmlProperty, enabled bool) (*Fi
 	return flw, true
 }
 
-func xmlToXMLLogWriter(filename string, props []xmlProperty, enabled bool) (*XMLLogWriter, bool) {
+func xmlToXMLLogWriter(filename string, props []xmlProperty, enabled bool) (*FileLogWriter, bool) {
 	file := ""
 	maxrecords := 0
 	maxsize := 0
@@ -246,13 +245,13 @@ func xmlToXMLLogWriter(filename string, props []xmlProperty, enabled bool) (*XML
 	}
 
 	xlw := NewXMLLogWriter(file, rotate)
-	xlw.SetRotateRecords(maxrecords)
+	xlw.SetRotateLines(maxrecords)
 	xlw.SetRotateSize(maxsize)
 	xlw.SetRotateDaily(daily)
 	return xlw, true
 }
 
-func xmlToSocketLogWriter(filename string, props []xmlProperty, enabled bool) (*SocketLogWriter, bool) {
+func xmlToSocketLogWriter(filename string, props []xmlProperty, enabled bool) (SocketLogWriter, bool) {
 	endpoint := ""
 	protocol := "udp"
 

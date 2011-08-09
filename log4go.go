@@ -6,30 +6,40 @@
 // object and create output filters for it.  You can send whatever you want to the Logger,
 // and it will filter that based on your settings and send it to the outputs.  This way, you
 // can put as much debug code in your program as you want, and when you're done you can filter
-// out the mundane messages so only the import ones show up.
+// out the mundane messages so only the important ones show up.
 //
 // Utility functions are provided to make life easier. Here is some example code to get started:
 //
-// log := elog.NewLogger()
-// log.AddFilter("stdout", elog.DEBUG, new(elog.ConsoleLogWriter))
-// log.AddFilter("log",    elog.FINE,  elog.NewFileLogWriter("example.log", true))
+// log := log4go.NewLogger()
+// log.AddFilter("stdout", log4go.DEBUG, log4go.NewConsoleLogWriter())
+// log.AddFilter("log",    log4go.FINE,  log4go.NewFileLogWriter("example.log", true))
 // log.Info("The time is now: %s", time.LocalTime().Format("15:04:05 MST 2006/01/02"))
 //
 // The first two lines can be combined with the utility NewConsoleLogger:
 //
-// log := elog.NewConsoleLogger(elog.DEBUG)
-// log.AddFilter("log",    elog.FINE,  elog.NewFileLogWriter("example.log", true))
+// log := log4go.NewConsoleLogger(log4go.DEBUG)
+// log.AddFilter("log",    log4go.FINE,  log4go.NewFileLogWriter("example.log", true))
 // log.Info("The time is now: %s", time.LocalTime().Format("15:04:05 MST 2006/01/02"))
 //
 // Usage notes:
-// - The ConsoleLogWriter does not display the source to standard output, but the FileLogWriter does.
-// - The utility functions (Info, Debug, Warn, etc) derive their source from the calling function
+// - The ConsoleLogWriter does not display the source of the message to standard
+//   output, but the FileLogWriter does.
+// - The utility functions (Info, Debug, Warn, etc) derive their source from the
+//   calling function, and this incurs extra overhead.
+//
+// Changes from 2.0:
+// - The external interface has remained mostly stable, but a lot of the
+//   internals have been changed, so if you depended on any of this or created
+//   your own LogWriter, then you will probably have to update your code.  In
+//   particular, Logger is now a map and ConsoleLogWriter is now a channel
+//   behind-the-scenes, and the LogWrite method no longer has return values.
 //
 // Future work: (please let me know if you think I should work on any of these particularly)
 // - Log file rotation
 // - Logging configuration files ala log4j
 // - Have the ability to remove filters?
-// - Have GetInfoChannel, GetDebugChannel, etc return a chan string that allows for another method of logging
+// - Have GetInfoChannel, GetDebugChannel, etc return a chan string that allows
+//   for another method of logging
 // - Add an XML filter type
 package log4go
 
@@ -39,22 +49,22 @@ import (
 	"time"
 	"strings"
 	"runtime"
-	"container/vector"
 )
 
 // Version information
 const (
-	L4G_VERSION = "log4go-v2.0.2"
-	L4G_MAJOR   = 2
+	L4G_VERSION = "log4go-v3.0.1"
+	L4G_MAJOR   = 3
 	L4G_MINOR   = 0
-	L4G_BUILD   = 2
+	L4G_BUILD   = 1
 )
 
 /****** Constants ******/
 
 // These are the integer logging levels used by the logger
+type level int
 const (
-	FINEST = iota
+	FINEST level = iota
 	FINE
 	DEBUG
 	TRACE
@@ -69,23 +79,21 @@ var (
 	levelStrings = [...]string{"FNST", "FINE", "DEBG", "TRAC", "INFO", "WARN", "EROR", "CRIT"}
 )
 
+/****** Variables ******/
+var (
+	// LogBufferLength specifies how many log messages a particular log4go
+	// logger can buffer at a time before writing them.
+	LogBufferLength = 256
+)
+
 /****** LogRecord ******/
 
-// This is the lifeblood of the package; it contains all of the pertinent information for each message
+// A LogRecord contains all of the pertinent information for each message
 type LogRecord struct {
-	Level   int        // The log level
-	Created *time.Time // The time at which the log message was created
-	Source  string     // The message source
-	Message string     // The log message
-}
-
-func newLogRecord(lv int, src string, msg string) *LogRecord {
-	lr := new(LogRecord)
-	lr.Created = time.LocalTime()
-	lr.Level = lv
-	lr.Source = src
-	lr.Message = msg
-	return lr
+	Level   level  // The log level
+	Created int64  // The time at which the log message was created (nanoseconds)
+	Source  string // The message source
+	Message string // The log message
 }
 
 /****** LogWriter ******/
@@ -93,177 +101,192 @@ func newLogRecord(lv int, src string, msg string) *LogRecord {
 // This is an interface for anything that should be able to write logs
 type LogWriter interface {
 	// This will be called to log a LogRecord message.
-	// If necessary. this function should be *INTERNALLY* synchronzied,
-	// and should spawn a separate goroutine if it could hang the program or take a long time.
-	// TODO: This may be changed to have an Init() call that returns a
-	// channel similar to <-chan *LogRecord for a more go-like internal setup
-	LogWrite(rec *LogRecord) (n int, err os.Error)
-
-	// This should return, at any given time, if the LogWriter is still in a good state.
-	// A good state is defined as having the ability to dispatch a log message immediately.
-	// if a LogWriter is not in a good state, the log message is simply not dispatched.
-	Good() bool
+	LogWrite(rec *LogRecord)
 
 	// This should clean up anything lingering about the LogWriter, as it is called before
-	// the LogWriter is removed.  If possible, this should guarantee that all LogWrites
-	// have been completed.
+	// the LogWriter is removed.  LogWrite should not be called after Close.
 	Close()
 }
 
 /****** Logger ******/
 
-// If LogRecord is the blood of the package, is the heart.
-type Logger struct {
-	// All filters have an entry in each of the following
-	filterLevels     map[string]int
-	filterLogWriters map[string]LogWriter
+// A Filter represents the log level below which no log records are written to
+// the associated LogWriter.
+type Filter struct {
+	Level  level
+	LogWriter
 }
 
-// Create a new logger
-func NewLogger() *Logger {
-	log := new(Logger)
-	log.filterLevels = make(map[string]int)
-	log.filterLogWriters = make(map[string]LogWriter)
-	return log
+// A Logger represents a collection of Filters through which log messages are
+// written.
+type Logger map[string]*Filter
+
+// Create a new logger.
+//
+// DEPRECATED: Use make(Logger) instead.
+func NewLogger() Logger {
+	return make(Logger)
 }
 
-// Closes all log writers in preparation for exiting the program.
-// Calling this is not really imperative, unless you want to guarantee that all log messages are written.
-func (log *Logger) Close() {
+// Create a new logger with a "stdout" filter configured to send log messages at
+// or above lvl to standard output.
+func NewConsoleLogger(lvl level) Logger {
+	return Logger{
+		"stdout": &Filter{lvl, NewConsoleLogWriter()},
+	}
+}
+
+// Closes all log writers in preparation for exiting the program or a
+// reconfiguration of logging.  Calling this is not really imperative, unless
+// you want to guarantee that all log messages are written.  Close removes
+// all filters (and thus all LogWriters) from the logger.
+func (log Logger) Close() {
 	// Close all open loggers
-	for key := range log.filterLogWriters {
-		log.filterLogWriters[key].Close()
-		log.filterLogWriters[key] = nil, false
-		log.filterLevels[key] = 0, false
+	for name, filt := range log {
+		filt.Close()
+		log[name] = nil, false
 	}
 }
 
-// Add the standard filter.
-// This function is NOT INTERNALLY THREAD SAFE.  If you plan on
-// calling this function from multiple goroutines, you will want
-// to synchronize it yourself somehow.
-// Returns self for chaining
-func (log *Logger) AddFilter(name string, level int, writer LogWriter) *Logger {
-	if writer == nil || !writer.Good() {
-		return nil
-	}
-	log.filterLevels[name] = level
-	log.filterLogWriters[name] = writer
-	return log
-}
-
-// Create a new logger with the standard stdout
-func NewConsoleLogger(level int) *Logger {
-	log := NewLogger()
-	log.AddFilter("stdout", level, new(ConsoleLogWriter))
+// Add a new LogWriter to the Logger which will only log messages at lvl or
+// higher.  This function should not be called from multiple goroutines.
+// Returns the logger for chaining.
+func (log Logger) AddFilter(name string, lvl level, writer LogWriter) Logger {
+	log[name] = &Filter{lvl, writer}
 	return log
 }
 
 /******* Logging *******/
 // Send a formatted log message internally
-func (log *Logger) intLogf(level int, format string, args ...interface{}) {
-	// Create a vector long enough to not require resizing
-	var logto vector.StringVector
-	logto.Resize(0, len(log.filterLevels))
+func (log Logger) intLogf(lvl level, format string, args ...interface{}) {
+	skip := true
 
 	// Determine if any logging will be done
-	for filt := range log.filterLevels {
-		if level >= log.filterLevels[filt] {
-			logto.Push(filt)
+	for _, filt := range log {
+		if lvl >= filt.Level {
+			skip = false
+			break
 		}
 	}
+	if skip {
+		return
+	}
 
-	// Only log if a filter requires it
-	if len(logto) > 0 {
-		// Determine caller func
-		pc, _, lineno, ok := runtime.Caller(2)
-		src := ""
-		if ok {
-			src = fmt.Sprintf("%s:%d", runtime.FuncForPC(pc).Name(), lineno)
+	// Determine caller func
+	pc, _, lineno, ok := runtime.Caller(2)
+	src := ""
+	if ok {
+		src = fmt.Sprintf("%s:%d", runtime.FuncForPC(pc).Name(), lineno)
+	}
+
+	msg := format
+	if len(args) > 0 {
+		msg = fmt.Sprintf(format, args...)
+	}
+
+	// Make the log record
+	rec := &LogRecord{
+		Level: lvl,
+		Created: time.Nanoseconds(),
+		Source: src,
+		Message: msg,
+	}
+
+	// Dispatch the logs
+	for _, filt := range log {
+		if lvl < filt.Level {
+			continue
 		}
-
-		// Make the log record
-		rec := newLogRecord(level, src, fmt.Sprintf(format, args...))
-
-		// Dispatch the logs
-		for _, filt := range logto {
-			log.filterLogWriters[filt].LogWrite(rec)
-		}
+		filt.LogWrite(rec)
 	}
 }
 
 // Send a closure log message internally
-func (log *Logger) intLogc(level int, closure func() string) {
-	// Create a vector long enough to not require resizing
-	var logto vector.StringVector
-	logto.Resize(0, len(log.filterLevels))
+func (log Logger) intLogc(lvl level, closure func() string) {
+	skip := true
 
 	// Determine if any logging will be done
-	for filt := range log.filterLevels {
-		if level >= log.filterLevels[filt] {
-			logto.Push(filt)
+	for _, filt := range log {
+		if lvl >= filt.Level {
+			skip = false
+			break
 		}
 	}
+	if skip {
+		return
+	}
 
-	// Only log if a filter requires it
-	if len(logto) > 0 {
-		// Determine caller func
-		pc, _, lineno, ok := runtime.Caller(2)
-		src := ""
-		if ok {
-			src = fmt.Sprintf("%s:%d", runtime.FuncForPC(pc).Name(), lineno)
+	// Determine caller func
+	pc, _, lineno, ok := runtime.Caller(2)
+	src := ""
+	if ok {
+		src = fmt.Sprintf("%s:%d", runtime.FuncForPC(pc).Name(), lineno)
+	}
+
+	// Make the log record
+	rec := &LogRecord{
+		Level: lvl,
+		Created: time.Nanoseconds(),
+		Source: src,
+		Message: closure(),
+	}
+
+	// Dispatch the logs
+	for _, filt := range log {
+		if lvl < filt.Level {
+			continue
 		}
-
-		// Make the log record from the closure's return
-		rec := newLogRecord(level, src, closure())
-
-		// Dispatch the logs
-		for _, filt := range logto {
-			log.filterLogWriters[filt].LogWrite(rec)
-		}
+		filt.LogWrite(rec)
 	}
 }
 
-// Send a log message manually
-func (log *Logger) Log(level int, source, message string) {
-	// Create a vector long enough to not require resizing
-	var logto vector.StringVector
-	logto.Resize(0, len(log.filterLevels))
+// Send a log message with manual level, source, and message.
+func (log Logger) Log(lvl level, source, message string) {
+	skip := true
 
 	// Determine if any logging will be done
-	for filt := range log.filterLevels {
-		if level >= log.filterLevels[filt] {
-			logto.Push(filt)
+	for _, filt := range log {
+		if lvl >= filt.Level {
+			skip = false
+			break
 		}
 	}
+	if skip {
+		return
+	}
 
-	// Only log if a filter requires it
-	if len(logto) > 0 {
-		// Make the log record
-		rec := newLogRecord(level, source, message)
+	// Make the log record
+	rec := &LogRecord{
+		Level: lvl,
+		Created: time.Nanoseconds(),
+		Source: source,
+		Message: message,
+	}
 
-		// Dispatch the logs
-		for _, filt := range logto {
-			lw := log.filterLogWriters[filt]
-			if lw.Good() {
-				lw.LogWrite(rec)
-			}
+	// Dispatch the logs
+	for _, filt := range log {
+		if lvl < filt.Level {
+			continue
 		}
+		filt.LogWrite(rec)
 	}
 }
 
-// Send a formatted log message easily
-func (log *Logger) Logf(level int, format string, args ...interface{}) {
-	log.intLogf(level, format, args...)
+// Logf logs a formatted log message at the given log level, using the caller as
+// its source.
+func (log Logger) Logf(lvl level, format string, args ...interface{}) {
+	log.intLogf(lvl, format, args...)
 }
 
-// Send a closure log message
-func (log *Logger) Logc(level int, closure func() string) {
-	log.intLogc(level, closure)
+// Logc logs a string returned by the closure at the given log level, using the caller as
+// its source.  If no log message would be written, the closure is never called.
+func (log Logger) Logc(lvl level, closure func() string) {
+	log.intLogc(lvl, closure)
 }
 
-// Utility for finest log messages (see Debug() for parameter explanation)
-func (log *Logger) Finest(arg0 interface{}, args ...interface{}) {
+// Finest logs a message at the finest log level.
+// See Debug for an explanation of the arguments.
+func (log Logger) Finest(arg0 interface{}, args ...interface{}) {
 	const (
 		lvl = FINEST
 	)
@@ -280,8 +303,9 @@ func (log *Logger) Finest(arg0 interface{}, args ...interface{}) {
 	}
 }
 
-// Utility for fine log messages (see Debug() for parameter explanation)
-func (log *Logger) Fine(arg0 interface{}, args ...interface{}) {
+// Fine logs a message at the fine log level.
+// See Debug for an explanation of the arguments.
+func (log Logger) Fine(arg0 interface{}, args ...interface{}) {
 	const (
 		lvl = FINE
 	)
@@ -298,11 +322,19 @@ func (log *Logger) Fine(arg0 interface{}, args ...interface{}) {
 	}
 }
 
-// Utility for debug log messages
-// When given a string as the first argument, this behaves like Logf but with the DEBUG log level (e.g. the first argument is interpreted as a format for the latter arguments)
-// When given a closure of type func()string, this logs the string returned by the closure iff it will be logged.  The closure runs at most one time.
-// When given anything else, the log message will be each of the arguments formatted with %v and separated by spaces (ala Sprint).
-func (log *Logger) Debug(arg0 interface{}, args ...interface{}) {
+// Debug is a utility method for debug log messages.
+// The behavior of Debug depends on the first argument:
+// - arg0 is a string
+//   When given a string as the first argument, this behaves like Logf but with
+//   the DEBUG log level: the first argument is interpreted as a format for the
+//   latter arguments.
+// - arg0 is a func()string
+//   When given a closure of type func()string, this logs the string returned by
+//   the closure iff it will be logged.  The closure runs at most one time.
+// - arg0 is interface{}
+//   When given anything else, the log message will be each of the arguments
+//   formatted with %v and separated by spaces (ala Sprint).
+func (log Logger) Debug(arg0 interface{}, args ...interface{}) {
 	const (
 		lvl = DEBUG
 	)
@@ -319,8 +351,9 @@ func (log *Logger) Debug(arg0 interface{}, args ...interface{}) {
 	}
 }
 
-// Utility for trace log messages (see Debug() for parameter explanation)
-func (log *Logger) Trace(arg0 interface{}, args ...interface{}) {
+// Trace logs a message at the trace log level.
+// See Debug for an explanation of the arguments.
+func (log Logger) Trace(arg0 interface{}, args ...interface{}) {
 	const (
 		lvl = TRACE
 	)
@@ -337,8 +370,9 @@ func (log *Logger) Trace(arg0 interface{}, args ...interface{}) {
 	}
 }
 
-// Utility for info log messages (see Debug() for parameter explanation)
-func (log *Logger) Info(arg0 interface{}, args ...interface{}) {
+// Info logs a message at the info log level.
+// See Debug for an explanation of the arguments.
+func (log Logger) Info(arg0 interface{}, args ...interface{}) {
 	const (
 		lvl = INFO
 	)
@@ -355,74 +389,73 @@ func (log *Logger) Info(arg0 interface{}, args ...interface{}) {
 	}
 }
 
-// Utility for warn log messages (returns an os.Error for easy function returns) (see Debug() for parameter explanation)
-// These functions will execute a closure exactly once, to build the error message for the return
-func (log *Logger) Warn(arg0 interface{}, args ...interface{}) os.Error {
+// Warn logs a message at the warning log level and returns the formatted error.
+// At the warning level and higher, there is no performance benefit if the
+// message is not actually logged, because all formats are processed and all
+// closures are executed to format the error message.
+// See Debug for further explanation of the arguments.
+func (log Logger) Warn(arg0 interface{}, args ...interface{}) os.Error {
 	const (
 		lvl = WARNING
 	)
+	var msg string
 	switch first := arg0.(type) {
 	case string:
 		// Use the string as a format string
-		log.intLogf(lvl, first, args...)
-		return os.NewError(fmt.Sprintf(first, args...))
+		msg = fmt.Sprintf(first, args...)
 	case func() string:
 		// Log the closure (no other arguments used)
-		str := first()
-		log.intLogf(lvl, "%s", str)
-		return os.NewError(str)
+		msg = first()
 	default:
 		// Build a format string so that it will be similar to Sprint
-		log.intLogf(lvl, fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
-		return os.NewError(fmt.Sprint(first) + fmt.Sprintf(strings.Repeat(" %v", len(args)), args...))
+		msg = fmt.Sprintf(fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
 	}
-	return nil
+	log.intLogf(lvl, msg)
+	return os.NewError(msg)
 }
 
-// Utility for error log messages (returns an os.Error for easy function returns) (see Debug() for parameter explanation)
-// These functions will execute a closure exactly once, to build the error message for the return
-func (log *Logger) Error(arg0 interface{}, args ...interface{}) os.Error {
+// Error logs a message at the error log level and returns the formatted error,
+// See Warn for an explanation of the performance and Debug for an explanation
+// of the parameters.
+func (log Logger) Error(arg0 interface{}, args ...interface{}) os.Error {
 	const (
 		lvl = ERROR
 	)
+	var msg string
 	switch first := arg0.(type) {
 	case string:
 		// Use the string as a format string
-		log.intLogf(lvl, first, args...)
-		return os.NewError(fmt.Sprintf(first, args...))
+		msg = fmt.Sprintf(first, args...)
 	case func() string:
 		// Log the closure (no other arguments used)
-		str := first()
-		log.intLogf(lvl, "%s", str)
-		return os.NewError(str)
+		msg = first()
 	default:
 		// Build a format string so that it will be similar to Sprint
-		log.intLogf(lvl, fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
-		return os.NewError(fmt.Sprint(first) + fmt.Sprintf(strings.Repeat(" %v", len(args)), args...))
+		msg = fmt.Sprintf(fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
 	}
-	return nil
+	log.intLogf(lvl, msg)
+	return os.NewError(msg)
 }
 
-// Utility for critical log messages (returns an os.Error for easy function returns) (see Debug() for parameter explanation)
-// These functions will execute a closure exactly once, to build the error message for the return
-func (log *Logger) Critical(arg0 interface{}, args ...interface{}) os.Error {
+// Critical logs a message at the critical log level and returns the formatted error,
+// See Warn for an explanation of the performance and Debug for an explanation
+// of the parameters.
+func (log Logger) Critical(arg0 interface{}, args ...interface{}) os.Error {
 	const (
 		lvl = CRITICAL
 	)
+	var msg string
 	switch first := arg0.(type) {
 	case string:
 		// Use the string as a format string
-		log.intLogf(lvl, first, args...)
-		return os.NewError(fmt.Sprintf(first, args...))
+		msg = fmt.Sprintf(first, args...)
 	case func() string:
 		// Log the closure (no other arguments used)
-		str := first()
-		log.intLogf(lvl, "%s", str)
-		return os.NewError(str)
+		msg = first()
 	default:
 		// Build a format string so that it will be similar to Sprint
-		log.intLogf(lvl, fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
-		return os.NewError(fmt.Sprint(first) + fmt.Sprintf(strings.Repeat(" %v", len(args)), args...))
+		msg = fmt.Sprintf(fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
 	}
-	return nil
+	log.intLogf(lvl, msg)
+	return os.NewError(msg)
 }
