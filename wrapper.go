@@ -13,7 +13,7 @@ var (
 )
 
 func init() {
-	Global = NewConsoleLogger(DEBUG)
+	Global = NewDefaultLogger(DEBUG)
 }
 
 // Wrapper for (*Logger).LoadConfiguration
