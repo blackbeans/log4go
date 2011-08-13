@@ -413,6 +413,22 @@ func TestXMLConfig(t *testing.T) {
 	os.Rename(configfile, "examples/"+configfile) // Keep this so that an example with the documentation is available
 }
 
+func BenchmarkFormatLogRecord(b *testing.B) {
+	rec := &LogRecord{
+		Level:   CRITICAL,
+		Created: now,
+		Source:  "source",
+		Message: "message",
+	}
+	for i := 0; i < b.N; i++ {
+		if i % 2 == 0 {
+			FormatLogRecord(FORMAT_DEFAULT, rec)
+		} else {
+			FormatLogRecord(FORMAT_SHORT, rec)
+		}
+	}
+}
+
 func BenchmarkConsoleLog(b *testing.B) {
 	sink, err := os.Open(os.DevNull)
 	if err != nil {
