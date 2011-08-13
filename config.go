@@ -11,12 +11,12 @@ import (
 )
 
 type xmlProperty struct {
-	Name  string "attr"
-	Value string "chardata"
+	Name  string `xml:"attr"`
+	Value string `xml:"chardata"`
 }
 
 type xmlFilter struct {
-	Enabled  string "attr"
+	Enabled  string `xml:"attr"`
 	Tag      string
 	Level    string
 	Type     string
@@ -121,7 +121,7 @@ func (log Logger) LoadConfiguration(filename string) {
 			continue
 		}
 
-		log[xmlfilt.Tag] = &Filter{lvl,filt}
+		log[xmlfilt.Tag] = &Filter{lvl, filt}
 	}
 }
 

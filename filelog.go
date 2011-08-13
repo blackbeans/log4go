@@ -48,13 +48,22 @@ func (w *FileLogWriter) Close() {
 	close(w.rec)
 }
 
+// NewFileLogWriter creates a new LogWriter which writes to the given file and
+// has rotation enabled if rotate is true.
+//
+// If rotate is true, any time a new log file is opened, the old one is renamed
+// with a .### extension to preserve it.  The various Set* methods can be used
+// to configure log rotation based on lines, size, and daily.
+//
+// The standard log-line format is:
+//   [%D %T] [%L] (%S) %M
 func NewFileLogWriter(fname string, rotate bool) *FileLogWriter {
 	w := &FileLogWriter{
-		rec: make(chan *LogRecord, LogBufferLength),
-		rot: make(chan bool),
+		rec:      make(chan *LogRecord, LogBufferLength),
+		rot:      make(chan bool),
 		filename: fname,
-		format: "[%D %T] [%L] (%S) %M",
-		rotate: rotate,
+		format:   "[%D %T] [%L] (%S) %M",
+		rotate:   rotate,
 	}
 
 	// open the file for the first time
@@ -72,34 +81,37 @@ func NewFileLogWriter(fname string, rotate bool) *FileLogWriter {
 		}()
 
 		for {
-		select {
-		case <-w.rot:
-			if err := w.intRotate(); err != nil {
-				fmt.Fprintf(os.Stderr, "FileLogWriter(%q): %s\n", w.filename, err)
-				return
-			}
-		case rec := <-w.rec:
-			if (w.maxlines > 0 && w.maxlines_curlines >= w.maxlines) ||
-				(w.maxsize > 0 && w.maxsize_cursize >= w.maxsize) ||
-				(w.daily && time.LocalTime().Day != w.daily_opendate) {
+			select {
+			case <-w.rot:
 				if err := w.intRotate(); err != nil {
 					fmt.Fprintf(os.Stderr, "FileLogWriter(%q): %s\n", w.filename, err)
 					return
 				}
-			}
+			case rec, ok := <-w.rec:
+				if !ok {
+					return
+				}
+				if (w.maxlines > 0 && w.maxlines_curlines >= w.maxlines) ||
+					(w.maxsize > 0 && w.maxsize_cursize >= w.maxsize) ||
+					(w.daily && time.LocalTime().Day != w.daily_opendate) {
+					if err := w.intRotate(); err != nil {
+						fmt.Fprintf(os.Stderr, "FileLogWriter(%q): %s\n", w.filename, err)
+						return
+					}
+				}
 
-			// Perform the write
-			n, err := fmt.Fprint(w.file, FormatLogRecord(w.format, rec))
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "FileLogWriter(%q): %s\n", w.filename, err)
-				return
-			}
+				// Perform the write
+				n, err := fmt.Fprint(w.file, FormatLogRecord(w.format, rec))
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "FileLogWriter(%q): %s\n", w.filename, err)
+					return
+				}
 
-			// Update the counts
-			w.maxlines_curlines++
-			w.maxsize_cursize += n
+				// Update the counts
+				w.maxlines_curlines++
+				w.maxsize_cursize += n
+			}
 		}
-	}
 	}()
 
 	return w
@@ -172,6 +184,9 @@ func (w *FileLogWriter) SetFormat(format string) *FileLogWriter {
 // you can use %D and %T in your header/footer for date and time).
 func (w *FileLogWriter) SetHeadFoot(head, foot string) *FileLogWriter {
 	w.header, w.trailer = head, foot
+	if w.maxlines_curlines == 0 {
+		fmt.Fprint(w.file, FormatLogRecord(w.header, &LogRecord{Created: time.Nanoseconds()}))
+	}
 	return w
 }
 
@@ -213,10 +228,9 @@ func (w *FileLogWriter) SetRotate(rotate bool) *FileLogWriter {
 // output XML record log messages instead of line-based ones.
 func NewXMLLogWriter(fname string, rotate bool) *FileLogWriter {
 	return NewFileLogWriter(fname, rotate).SetFormat(
-`	<record level="%L">
+		`	<record level="%L">
 		<timestamp>%D %T</timestamp>
 		<source>%S</source>
 		<message>%M</message>
-	</record>
-`).SetHeadFoot("<log created=\"%D %T\">", "</log>\n")
+	</record>`).SetHeadFoot("<log created=\"%D %T\">", "</log>")
 }

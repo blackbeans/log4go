@@ -3,17 +3,23 @@
 package log4go
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
-	"os"
 	"io"
+	"io/ioutil"
+	"os"
+	"runtime"
 	"testing"
 	"time"
 )
 
+const testLogFile = "_logtest.log"
+
 func newLogRecord(lvl level, src string, msg string) *LogRecord {
 	return &LogRecord{
-		Level: lvl,
-		Source: src,
+		Level:   lvl,
+		Source:  src,
 		Message: msg,
 	}
 }
@@ -36,25 +42,25 @@ func TestELog(t *testing.T) {
 
 var now int64 = 1234567890123456789
 
-var formatTests = []struct{
+var formatTests = []struct {
 	Test    string
 	Record  *LogRecord
 	Formats map[string]string
 }{
 	{
-	Test: "Standard formats",
-	Record: &LogRecord{
-		Level: ERROR,
-		Source: "source",
-		Message: "message",
-		Created: now,
-	},
-	Formats: map[string]string{
-		// TODO(kevlar): How can I do this so it'll work outside of PST?
-		FORMAT_DEFAULT: "[2009/02/13 23:31:30 UTC] [EROR] (source) message\n",
-		FORMAT_SHORT:   "[23:31 02/13/09] [EROR] message\n",
-		FORMAT_ABBREV:  "[EROR] message\n",
-	},
+		Test: "Standard formats",
+		Record: &LogRecord{
+			Level:   ERROR,
+			Source:  "source",
+			Message: "message",
+			Created: now,
+		},
+		Formats: map[string]string{
+			// TODO(kevlar): How can I do this so it'll work outside of PST?
+			FORMAT_DEFAULT: "[2009/02/13 23:31:30 UTC] [EROR] (source) message\n",
+			FORMAT_SHORT:   "[23:31 02/13/09] [EROR] message\n",
+			FORMAT_ABBREV:  "[EROR] message\n",
+		},
 	},
 }
 
@@ -71,7 +77,7 @@ func TestFormatLogRecord(t *testing.T) {
 	}
 }
 
-var logRecordWriteTests = []struct{
+var logRecordWriteTests = []struct {
 	Test    string
 	Record  *LogRecord
 	Console string
@@ -79,8 +85,8 @@ var logRecordWriteTests = []struct{
 	{
 		Test: "Normal message",
 		Record: &LogRecord{
-			Level: CRITICAL,
-			Source: "source",
+			Level:   CRITICAL,
+			Source:  "source",
 			Message: "message",
 			Created: now,
 		},
@@ -110,90 +116,75 @@ func TestConsoleLogWriter(t *testing.T) {
 	}
 }
 
-/*
 func TestFileLogWriter(t *testing.T) {
-	//func NewFileLogWriter(fname string, append bool) *FileLogWriter {}
-	flw := NewFileLogWriter("logtest.log", false)
-	rec := newLogRecord(CRITICAL, "source", "message")
+	defer func(buflen int) {
+		LogBufferLength = buflen
+	}(LogBufferLength)
+	LogBufferLength = 0
 
-	if flw == nil {
-		t.Fatalf("Invalid return: flw should not be nil")
+	w := NewFileLogWriter(testLogFile, false)
+	if w == nil {
+		t.Fatalf("Invalid return: w should not be nil")
 	}
+	defer os.Remove(testLogFile)
 
-	//func (flw *FileLogWriter) Good() bool {}
-	if flw.Good() == false {
-		t.Fatalf("Invalid return: flw should be Good")
+	w.LogWrite(newLogRecord(CRITICAL, "source", "message"))
+	w.Close()
+
+	if contents, err := ioutil.ReadFile(testLogFile); err != nil {
+		t.Errorf("read(%q): %s", testLogFile, err)
+	} else if len(contents) != 50 {
+		t.Errorf("malformed filelog: %q (%d bytes)", string(contents), len(contents))
 	}
-
-	//func (flw *FileLogWriter) LogWrite(rec *LogRecord) (n int, err os.Error) {}
-	if n, err := flw.LogWrite(rec); n != 50 && err == nil {
-		t.Fatalf("Invalid return: flw.LogWrite returned (%d,%s)", n, err)
-	}
-
-	//func (flw *FileLogWriter) Close() {}
-	flw.Close()
-
-	// delete the file
-	os.Remove("logtest.log")
 }
 
 func TestXMLLogWriter(t *testing.T) {
-	//func NewXMLLogWriter(fname string, append bool) *XMLLogWriter {}
-	xlw := NewXMLLogWriter("logtest.log", false)
-	rec := newLogRecord(CRITICAL, "source", "message")
+	defer func(buflen int) {
+		LogBufferLength = buflen
+	}(LogBufferLength)
+	LogBufferLength = 0
 
-	if xlw == nil {
-		t.Fatalf("Invalid return: xlw should not be nil")
+	w := NewXMLLogWriter(testLogFile, false)
+	if w == nil {
+		t.Fatalf("Invalid return: w should not be nil")
 	}
+	defer os.Remove(testLogFile)
 
-	//func (xlw *XMLLogWriter) Good() bool {}
-	if xlw.Good() == false {
-		t.Fatalf("Invalid return: xlw should be Good")
+	w.LogWrite(newLogRecord(CRITICAL, "source", "message"))
+	w.Close()
+
+	if contents, err := ioutil.ReadFile(testLogFile); err != nil {
+		t.Errorf("read(%q): %s", testLogFile, err)
+	} else if len(contents) != 185 {
+		t.Errorf("malformed xmllog: %q (%d bytes)", string(contents), len(contents))
 	}
-
-	//func (xlw *XMLLogWriter) LogWrite(rec *LogRecord) (n int, err os.Error) {}
-	if n, err := xlw.LogWrite(rec); n != 139 && err == nil {
-		t.Fatalf("Invalid return: xlw.LogWrite returned (%d,%s)", n, err)
-	}
-
-	//func (xlw *XMLLogWriter) Close() {}
-	xlw.Close()
-
-	// delete the file
-	os.Remove("logtest.log")
 }
 
 func TestLogger(t *testing.T) {
-	//func NewLogger() *Logger {}
-	l := NewLogger()
-	if l == nil {
-		t.Fatalf("NewLogger should never return nil")
-	}
-
-	//func NewConsoleLogger(level int) *Logger {}
-	sl := NewConsoleLogger(WARNING)
+	sl := NewDefaultLogger(WARNING)
 	if sl == nil {
-		t.Fatalf("NewConsoleLogger should never return nil")
+		t.Fatalf("NewDefaultLogger should never return nil")
 	}
-	if lw, exist := sl.filterLogWriters["stdout"]; lw == nil || exist != true {
-		t.Fatalf("NewConsoleLogger produced invalid logger (DNE or nil)")
+	if lw, exist := sl["stdout"]; lw == nil || exist != true {
+		t.Fatalf("NewDefaultLogger produced invalid logger (DNE or nil)")
 	}
-	if sl.filterLevels["stdout"] != WARNING {
-		t.Fatalf("NewConsoleLogger produced invalid logger (incorrect level)")
+	if sl["stdout"].Level != WARNING {
+		t.Fatalf("NewDefaultLogger produced invalid logger (incorrect level)")
 	}
-	if len(sl.filterLevels) != 1 || len(sl.filterLogWriters) != 1 {
-		t.Fatalf("NewConsoleLogger produced invalid logger (incorrect map count)")
+	if len(sl) != 1 {
+		t.Fatalf("NewDefaultLogger produced invalid logger (incorrect map count)")
 	}
 
 	//func (l *Logger) AddFilter(name string, level int, writer LogWriter) {}
+	l := make(Logger)
 	l.AddFilter("stdout", DEBUG, NewConsoleLogWriter())
-	if lw, exist := l.filterLogWriters["stdout"]; lw == nil || exist != true {
+	if lw, exist := l["stdout"]; lw == nil || exist != true {
 		t.Fatalf("AddFilter produced invalid logger (DNE or nil)")
 	}
-	if l.filterLevels["stdout"] != DEBUG {
+	if l["stdout"].Level != DEBUG {
 		t.Fatalf("AddFilter produced invalid logger (incorrect level)")
 	}
-	if len(l.filterLevels) != 1 || len(l.filterLogWriters) != 1 {
+	if len(l) != 1 {
 		t.Fatalf("AddFilter produced invalid logger (incorrect map count)")
 	}
 
@@ -225,87 +216,52 @@ func TestLogger(t *testing.T) {
 
 func TestLogOutput(t *testing.T) {
 	const (
-		expected = "5d1d02513aa1d227bb762faa6b545fc1"
+		expected = "fdf3e51e444da56b4cb400f30bc47424"
 	)
 
-	l := NewLogger()
+	// Unbuffered output
+	defer func(buflen int) {
+		LogBufferLength = buflen
+	}(LogBufferLength)
+	LogBufferLength = 0
 
-	// Delete and open the output log
-	os.Remove("_output.log")
-	l.AddFilter("file", FINEST, NewFileLogWriter("_output.log", false).SetFormat("[%L] '%M'"))
+	l := make(Logger)
+
+	// Delete and open the output log without a timestamp (for a constant md5sum)
+	l.AddFilter("file", FINEST, NewFileLogWriter(testLogFile, false).SetFormat("[%L] %M"))
+	defer os.Remove(testLogFile)
 
 	// Send some log messages
-	l.Log(CRITICAL, "testsrc1", l.Critical("This message is a t %d", 1).String())
-	l.Logf(ERROR, "This message is a t %s", l.Error(func() string { return "2" }))
-	l.Logf(WARNING, "This message is a t %s", l.Warn(3))
-	l.Info("This message is a t%d", 4)
-	l.Trace("This message is a t%d", 5)
-	l.Debug("This message is a t%d", 6)
-	l.Fine("This message is a t%d", 7)
-	l.Finest("This message is a t%d", 8)
-	l.Finest(9, "This message is a t")
-	l.Finest(func() string { return "This message is a test0" })
+	l.Log(CRITICAL, "testsrc1", fmt.Sprintf("This message is level %d", int(CRITICAL)))
+	l.Logf(ERROR, "This message is level %v", ERROR)
+	l.Logf(WARNING, "This message is level %s", WARNING)
+	l.Logc(INFO, func() string { return "This message is level INFO" })
+	l.Trace("This message is level %d", int(TRACE))
+	l.Debug("This message is level %s", DEBUG)
+	l.Fine(func() string { return fmt.Sprintf("This message is level %v", FINE) })
+	l.Finest("This message is level %v", FINEST)
+	l.Finest(FINEST, "is also this message's level")
 
 	l.Close()
 
-	contents, err := ioutil.ReadFile("_output.log")
+	contents, err := ioutil.ReadFile(testLogFile)
 	if err != nil {
 		t.Fatalf("Could not read output log: %s", err)
 	}
 
 	sum := md5.New()
 	sum.Write(contents)
-	sumstr := hex.EncodeToString(sum.Sum())
-	if sumstr != expected {
+	if sumstr := hex.EncodeToString(sum.Sum()); sumstr != expected {
+		t.Errorf("--- Log Contents:\n%s---", string(contents))
 		t.Fatalf("Checksum does not match: %s (expecting %s)", sumstr, expected)
 	}
-	os.Remove("_output.log")
-}
-
-func TestLogWrapperOutput(t *testing.T) {
-	const (
-		expected = "5d1d02513aa1d227bb762faa6b545fc1"
-	)
-
-	Close()
-
-	// Delete and open the output log
-	os.Remove("_output.log")
-	AddFilter("file", FINEST, NewFileLogWriter("_output.log", false).SetFormat("[%L] '%M'"))
-
-	// Send some log messages
-	Log(CRITICAL, "testsrc1", Critical("This message is a t %d", 1).String())
-	Logf(ERROR, "This message is a t %s", Error(func() string { return "2" }))
-	Logf(WARNING, "This message is a t %s", Warn(3))
-	Info("This message is a t%d", 4)
-	Trace("This message is a t%d", 5)
-	Debug("This message is a t%d", 6)
-	Fine("This message is a t%d", 7)
-	Finest("This message is a t%d", 8)
-	Finest(9, "This message is a t")
-	Finest(func() string { return "This message is a test0" })
-
-	Close()
-
-	contents, err := ioutil.ReadFile("_output.log")
-	if err != nil {
-		t.Fatalf("Could not read output log: %s", err)
-	}
-
-	sum := md5.New()
-	sum.Write(contents)
-	sumstr := hex.EncodeToString(sum.Sum())
-	if sumstr != expected {
-		t.Fatalf("Checksum does not match: %s (expecting %s)", sumstr, expected)
-	}
-	os.Remove("_output.log")
 }
 
 func TestCountMallocs(t *testing.T) {
 	const N = 1
 
 	// Console logger
-	sl := NewConsoleLogger(INFO)
+	sl := NewDefaultLogger(INFO)
 	mallocs := 0 - runtime.MemStats.Mallocs
 	for i := 0; i < N; i++ {
 		sl.Log(WARNING, "here", "This is a WARNING message")
@@ -322,7 +278,7 @@ func TestCountMallocs(t *testing.T) {
 	fmt.Printf("mallocs per sl.Logf(WARNING, \"%%s is a log message with level %%d\", \"This\", WARNING): %d\n", mallocs/N)
 
 	// Console logger (not logged)
-	sl = NewConsoleLogger(INFO)
+	sl = NewDefaultLogger(INFO)
 	mallocs = 0 - runtime.MemStats.Mallocs
 	for i := 0; i < N; i++ {
 		sl.Log(DEBUG, "here", "This is a DEBUG log message")
@@ -398,77 +354,80 @@ func TestXMLConfig(t *testing.T) {
 	fmt.Fprintln(fd, "</logging>")
 	fd.Close()
 
-	log := NewLogger()
+	log := make(Logger)
 	log.LoadConfiguration(configfile)
+	defer os.Remove("trace.xml")
+	defer os.Remove("test.log")
+	defer log.Close()
 
-	// Make sure we got 2 loggers
-	if len(log.filterLevels) != 3 || len(log.filterLogWriters) != 3 {
-		t.Fatalf("XMLConfig: Expected 3 filters, found %d (%d)", len(log.filterLevels), len(log.filterLogWriters))
+	// Make sure we got all loggers
+	if len(log) != 3 {
+		t.Fatalf("XMLConfig: Expected 3 filters, found %d", len(log))
+	}
+
+	// Make sure they're the right keys
+	if _, ok := log["stdout"]; !ok {
+		t.Errorf("XMLConfig: Expected stdout logger")
+	}
+	if _, ok := log["file"]; !ok {
+		t.Fatalf("XMLConfig: Expected file logger")
+	}
+	if _, ok := log["xmllog"]; !ok {
+		t.Fatalf("XMLConfig: Expected xmllog logger")
 	}
 
 	// Make sure they're the right type
-	if _, ok := log.filterLogWriters["stdout"].(*ConsoleLogWriter); !ok {
-		t.Errorf("XMLConfig: Expected stdout to be *ConsoleLogWriter, found %T", log.filterLogWriters["stdout"])
+	if _, ok := log["stdout"].LogWriter.(ConsoleLogWriter); !ok {
+		t.Fatalf("XMLConfig: Expected stdout to be ConsoleLogWriter, found %T", log["stdout"].LogWriter)
 	}
-	if _, ok := log.filterLogWriters["file"].(*FileLogWriter); !ok {
-		t.Fatalf("XMLConfig: Expected file to be *FileLogWriter, found %T", log.filterLogWriters["file"])
+	if _, ok := log["file"].LogWriter.(*FileLogWriter); !ok {
+		t.Fatalf("XMLConfig: Expected file to be *FileLogWriter, found %T", log["file"].LogWriter)
 	}
-	if _, ok := log.filterLogWriters["xmllog"].(*XMLLogWriter); !ok {
-		t.Fatalf("XMLConfig: Expected xmllog to be *XMLLogWriter, found %T", log.filterLogWriters["xmllog"])
+	if _, ok := log["xmllog"].LogWriter.(*FileLogWriter); !ok {
+		t.Fatalf("XMLConfig: Expected xmllog to be *FileLogWriter, found %T", log["xmllog"].LogWriter)
 	}
 
 	// Make sure levels are set
-	if lvl := log.filterLevels["stdout"]; lvl != DEBUG {
+	if lvl := log["stdout"].Level; lvl != DEBUG {
 		t.Errorf("XMLConfig: Expected stdout to be set to level %d, found %d", DEBUG, lvl)
 	}
-	if lvl := log.filterLevels["file"]; lvl != FINEST {
+	if lvl := log["file"].Level; lvl != FINEST {
 		t.Errorf("XMLConfig: Expected file to be set to level %d, found %d", FINEST, lvl)
 	}
-	if lvl := log.filterLevels["xmllog"]; lvl != TRACE {
+	if lvl := log["xmllog"].Level; lvl != TRACE {
 		t.Errorf("XMLConfig: Expected xmllog to be set to level %d, found %d", TRACE, lvl)
 	}
 
-	// Make sure the FLW is open and points to the right file
-	if ok := log.filterLogWriters["file"].Good(); !ok {
-		t.Errorf("XMLConfig: Expected file to have opened %s successfully, but wasn'testing", "test.log")
-	}
-	if fname := log.filterLogWriters["file"].(*FileLogWriter).file.Name(); fname != "test.log" {
+	// Make sure the w is open and points to the right file
+	if fname := log["file"].LogWriter.(*FileLogWriter).file.Name(); fname != "test.log" {
 		t.Errorf("XMLConfig: Expected file to have opened %s, found %s", "test.log", fname)
 	}
 
 	// Make sure the XLW is open and points to the right file
-	if ok := log.filterLogWriters["xmllog"].Good(); !ok {
-		t.Errorf("XMLConfig: Expected xmllog to have opened %s successfully, but wasn'testing", "trace.xml")
-	}
-	if fname := log.filterLogWriters["xmllog"].(*XMLLogWriter).file.Name(); fname != "trace.xml" {
+	if fname := log["xmllog"].LogWriter.(*FileLogWriter).file.Name(); fname != "trace.xml" {
 		t.Errorf("XMLConfig: Expected xmllog to have opened %s, found %s", "trace.xml", fname)
 	}
-
-	log.Close()
-	os.Remove("test.log")
-	os.Remove("trace.xml")
 
 	// Move XML log file
 	os.Rename(configfile, "examples/"+configfile) // Keep this so that an example with the documentation is available
 }
-*/
 
 func BenchmarkConsoleLog(b *testing.B) {
-	sl := NewConsoleLogger(INFO)
+	sl := NewDefaultLogger(INFO)
 	for i := 0; i < b.N; i++ {
 		sl.Log(WARNING, "here", "This is a log message")
 	}
 }
 
 func BenchmarkConsoleNotLogged(b *testing.B) {
-	sl := NewConsoleLogger(INFO)
+	sl := NewDefaultLogger(INFO)
 	for i := 0; i < b.N; i++ {
 		sl.Log(DEBUG, "here", "This is a log message")
 	}
 }
 
 func BenchmarkConsoleUtilLog(b *testing.B) {
-	sl := NewConsoleLogger(INFO)
+	sl := NewDefaultLogger(INFO)
 	for i := 0; i < b.N; i++ {
 		sl.Info("%s is a log message", "This")
 	}
@@ -476,14 +435,14 @@ func BenchmarkConsoleUtilLog(b *testing.B) {
 
 
 func BenchmarkConsoleUtilNotLog(b *testing.B) {
-	sl := NewConsoleLogger(INFO)
+	sl := NewDefaultLogger(INFO)
 	for i := 0; i < b.N; i++ {
 		sl.Debug("%s is a log message", "This")
 	}
 }
 
 func BenchmarkFileLog(b *testing.B) {
-	sl := NewLogger()
+	sl := make(Logger)
 	b.StopTimer()
 	sl.AddFilter("file", INFO, NewFileLogWriter("benchlog.log", false))
 	b.StartTimer()
@@ -495,7 +454,7 @@ func BenchmarkFileLog(b *testing.B) {
 }
 
 func BenchmarkFileNotLogged(b *testing.B) {
-	sl := NewLogger()
+	sl := make(Logger)
 	b.StopTimer()
 	sl.AddFilter("file", INFO, NewFileLogWriter("benchlog.log", false))
 	b.StartTimer()
@@ -507,7 +466,7 @@ func BenchmarkFileNotLogged(b *testing.B) {
 }
 
 func BenchmarkFileUtilLog(b *testing.B) {
-	sl := NewLogger()
+	sl := make(Logger)
 	b.StopTimer()
 	sl.AddFilter("file", INFO, NewFileLogWriter("benchlog.log", false))
 	b.StartTimer()
@@ -519,7 +478,7 @@ func BenchmarkFileUtilLog(b *testing.B) {
 }
 
 func BenchmarkFileUtilNotLog(b *testing.B) {
-	sl := NewLogger()
+	sl := make(Logger)
 	b.StopTimer()
 	sl.AddFilter("file", INFO, NewFileLogWriter("benchlog.log", false))
 	b.StartTimer()

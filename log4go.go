@@ -63,6 +63,7 @@ const (
 
 // These are the integer logging levels used by the logger
 type level int
+
 const (
 	FINEST level = iota
 	FINE
@@ -74,16 +75,24 @@ const (
 	CRITICAL
 )
 
+
 // Logging level strings
 var (
 	levelStrings = [...]string{"FNST", "FINE", "DEBG", "TRAC", "INFO", "WARN", "EROR", "CRIT"}
 )
 
+func (l level) String() string {
+	if l < 0 || int(l) > len(levelStrings) {
+		return "UNKNOWN"
+	}
+	return levelStrings[int(l)]
+}
+
 /****** Variables ******/
 var (
 	// LogBufferLength specifies how many log messages a particular log4go
 	// logger can buffer at a time before writing them.
-	LogBufferLength = 256
+	LogBufferLength = 32
 )
 
 /****** LogRecord ******/
@@ -113,7 +122,7 @@ type LogWriter interface {
 // A Filter represents the log level below which no log records are written to
 // the associated LogWriter.
 type Filter struct {
-	Level  level
+	Level level
 	LogWriter
 }
 
@@ -125,12 +134,24 @@ type Logger map[string]*Filter
 //
 // DEPRECATED: Use make(Logger) instead.
 func NewLogger() Logger {
+	os.Stderr.WriteString("warning: use of deprecated NewLogger\n")
 	return make(Logger)
 }
 
 // Create a new logger with a "stdout" filter configured to send log messages at
 // or above lvl to standard output.
+//
+// DEPRECATED: use NewDefaultLogger instead.
 func NewConsoleLogger(lvl level) Logger {
+	os.Stderr.WriteString("warning: use of deprecated NewConsoleLogger\n")
+	return Logger{
+		"stdout": &Filter{lvl, NewConsoleLogWriter()},
+	}
+}
+
+// Create a new logger with a "stdout" filter configured to send log messages at
+// or above lvl to standard output.
+func NewDefaultLogger(lvl level) Logger {
 	return Logger{
 		"stdout": &Filter{lvl, NewConsoleLogWriter()},
 	}
@@ -186,9 +207,9 @@ func (log Logger) intLogf(lvl level, format string, args ...interface{}) {
 
 	// Make the log record
 	rec := &LogRecord{
-		Level: lvl,
+		Level:   lvl,
 		Created: time.Nanoseconds(),
-		Source: src,
+		Source:  src,
 		Message: msg,
 	}
 
@@ -225,9 +246,9 @@ func (log Logger) intLogc(lvl level, closure func() string) {
 
 	// Make the log record
 	rec := &LogRecord{
-		Level: lvl,
+		Level:   lvl,
 		Created: time.Nanoseconds(),
-		Source: src,
+		Source:  src,
 		Message: closure(),
 	}
 
@@ -257,9 +278,9 @@ func (log Logger) Log(lvl level, source, message string) {
 
 	// Make the log record
 	rec := &LogRecord{
-		Level: lvl,
+		Level:   lvl,
 		Created: time.Nanoseconds(),
-		Source: source,
+		Source:  source,
 		Message: message,
 	}
 

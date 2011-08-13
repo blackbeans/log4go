@@ -23,12 +23,16 @@ var (
 	TimeConversionFunction = time.SecondsToLocalTime
 )
 
-var formatCache = struct{
-	*sync.RWMutex
+// This could really use Dmitry's "co" package's thread-local storage.
+var formatCache = struct {
+	*sync.Mutex
+	buf               *bytes.Buffer
+	tm                *time.Time
 	LastUpdateSeconds int64
-	T, t, D, d string
+	t, T, d, D        string
 }{
-	RWMutex: new(sync.RWMutex),
+	Mutex: new(sync.Mutex),
+	buf:   new(bytes.Buffer),
 }
 
 // Known format codes:
@@ -42,36 +46,53 @@ var formatCache = struct{
 // Ignores unknown formats
 // Recommended: "[%D %T] [%L] (%S) %M"
 func FormatLogRecord(format string, rec *LogRecord) string {
-	out := bytes.NewBuffer(make([]byte, 0, 4*len(format)))
+	if rec == nil {
+		return "<nil>"
+	}
+	if len(format) == 0 {
+		return ""
+	}
+
+	formatCache.Lock()
+	defer formatCache.Unlock()
+
+	out := formatCache.buf
+	out.Truncate(0)
+
+	secs := rec.Created / 1e9
+	stale := secs != formatCache.LastUpdateSeconds
+
+	if stale {
+		formatCache.tm = TimeConversionFunction(secs)
+	}
+	tm := formatCache.tm
 
 	// Split the string into pieces by % signs
 	pieces := bytes.Split([]byte(format), []byte{'%'})
-
-	secs := rec.Created/1e9
-	if secs != formatCache.LastUpdateSeconds {
-		formatCache.Lock()
-		defer formatCache.Unlock()
-		tm := TimeConversionFunction(secs)
-		formatCache.T = fmt.Sprintf("%02d:%02d:%02d %s", tm.Hour, tm.Minute, tm.Second, tm.Zone)
-		formatCache.t = fmt.Sprintf("%02d:%02d", tm.Hour, tm.Minute)
-		formatCache.D = fmt.Sprintf("%04d/%02d/%02d", tm.Year, tm.Month, tm.Day)
-		formatCache.d = fmt.Sprintf("%02d/%02d/%02d", tm.Month, tm.Day, tm.Year%100)
-	} else {
-		formatCache.RLock()
-		defer formatCache.RUnlock()
-	}
 
 	// Iterate over the pieces, replacing known formats
 	for i, piece := range pieces {
 		if i > 0 && len(piece) > 0 {
 			switch piece[0] {
 			case 'T':
+				if stale || formatCache.T == "" {
+					formatCache.T = fmt.Sprintf("%02d:%02d:%02d %s", tm.Hour, tm.Minute, tm.Second, tm.Zone)
+				}
 				out.WriteString(formatCache.T)
 			case 't':
+				if stale || formatCache.t == "" {
+					formatCache.t = fmt.Sprintf("%02d:%02d", tm.Hour, tm.Minute)
+				}
 				out.WriteString(formatCache.t)
 			case 'D':
+				if stale || formatCache.D == "" {
+					formatCache.D = fmt.Sprintf("%04d/%02d/%02d", tm.Year, tm.Month, tm.Day)
+				}
 				out.WriteString(formatCache.D)
 			case 'd':
+				if stale || formatCache.d == "" {
+					formatCache.d = fmt.Sprintf("%02d/%02d/%02d", tm.Month, tm.Day, tm.Year%100)
+				}
 				out.WriteString(formatCache.d)
 			case 'L':
 				out.WriteString(levelStrings[rec.Level])
