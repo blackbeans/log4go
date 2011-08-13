@@ -16,11 +16,13 @@ import (
 )
 
 const testLogFile = "_logtest.log"
+const now int64 = 1234567890123456789
 
 func newLogRecord(lvl level, src string, msg string) *LogRecord {
 	return &LogRecord{
 		Level:   lvl,
 		Source:  src,
+		Created: now,
 		Message: msg,
 	}
 }
@@ -40,8 +42,6 @@ func TestELog(t *testing.T) {
 		t.Errorf("Incorrect message: %s should be %s", lr.Source, "message")
 	}
 }
-
-var now int64 = 1234567890123456789
 
 var formatTests = []struct {
 	Test    string
@@ -131,6 +131,7 @@ func TestFileLogWriter(t *testing.T) {
 
 	w.LogWrite(newLogRecord(CRITICAL, "source", "message"))
 	w.Close()
+	runtime.Gosched()
 
 	if contents, err := ioutil.ReadFile(testLogFile); err != nil {
 		t.Errorf("read(%q): %s", testLogFile, err)
@@ -153,6 +154,7 @@ func TestXMLLogWriter(t *testing.T) {
 
 	w.LogWrite(newLogRecord(CRITICAL, "source", "message"))
 	w.Close()
+	runtime.Gosched()
 
 	if contents, err := ioutil.ReadFile(testLogFile); err != nil {
 		t.Errorf("read(%q): %s", testLogFile, err)
@@ -414,6 +416,7 @@ func TestXMLConfig(t *testing.T) {
 }
 
 func BenchmarkFormatLogRecord(b *testing.B) {
+	const updateEvery = 1
 	rec := &LogRecord{
 		Level:   CRITICAL,
 		Created: now,
@@ -421,6 +424,7 @@ func BenchmarkFormatLogRecord(b *testing.B) {
 		Message: "message",
 	}
 	for i := 0; i < b.N; i++ {
+		rec.Created += 1e9/updateEvery
 		if i % 2 == 0 {
 			FormatLogRecord(FORMAT_DEFAULT, rec)
 		} else {
