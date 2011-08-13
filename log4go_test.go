@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"runtime"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -413,6 +414,14 @@ func TestXMLConfig(t *testing.T) {
 }
 
 func BenchmarkConsoleLog(b *testing.B) {
+	sink, err := os.Open(os.DevNull)
+	if err != nil {
+		panic(err)
+	}
+	if err := syscall.Dup2(sink.Fd(), syscall.Stdout); err != 0 {
+		panic(os.Errno(err))
+	}
+
 	sl := NewDefaultLogger(INFO)
 	for i := 0; i < b.N; i++ {
 		sl.Log(WARNING, "here", "This is a log message")
