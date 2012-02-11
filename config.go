@@ -3,28 +3,29 @@
 package log4go
 
 import (
-	"os"
+	"encoding/xml"
 	"fmt"
-	"xml"
-	"strings"
+	"io/ioutil"
+	"os"
 	"strconv"
+	"strings"
 )
 
 type xmlProperty struct {
-	Name  string `xml:"attr"`
-	Value string `xml:"chardata"`
+	Name  string `xml:"name,attr"`
+	Value string `xml:",chardata"`
 }
 
 type xmlFilter struct {
-	Enabled  string `xml:"attr"`
-	Tag      string
-	Level    string
-	Type     string
-	Property []xmlProperty
+	Enabled  string `xml:"enabled,attr"`
+	Tag      string `xml:"tag"`
+	Level    string `xml:"level"`
+	Type     string `xml:"type"`
+	Property []xmlProperty `xml:"property"`
 }
 
 type xmlLoggerConfig struct {
-	Filter []xmlFilter
+	Filter  []xmlFilter `xml:"filter"`
 }
 
 // Load XML configuration; see examples/example.xml for documentation
@@ -34,14 +35,19 @@ func (log Logger) LoadConfiguration(filename string) {
 	// Open the configuration file
 	fd, err := os.Open(filename)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "LoadConfiguration: Error:  Could not open %s for reading: %s\n", filename, err)
+		fmt.Fprintf(os.Stderr, "LoadConfiguration: Error: Could not open %q for reading: %s\n", filename, err)
+		os.Exit(1)
+	}
+
+	contents, err := ioutil.ReadAll(fd)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "LoadConfiguration: Error: Could not read %q: %s\n", filename, err)
 		os.Exit(1)
 	}
 
 	xc := new(xmlLoggerConfig)
-	err = xml.Unmarshal(fd, xc)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "LoadConfiguration: Error: Could not parse XML configuration in %s: %s\n", filename, err)
+	if err := xml.Unmarshal(contents, xc); err != nil {
+		fmt.Fprintf(os.Stderr, "LoadConfiguration: Error: Could not parse XML configuration in %q: %s\n", filename, err)
 		os.Exit(1)
 	}
 

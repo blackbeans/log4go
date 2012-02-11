@@ -1,6 +1,6 @@
 package main
 
-import l4g "log4go.googlecode.com/svn/stable"
+import l4g "code.google.com/p/log4go"
 
 func main() {
 	// Load the configuration (isn't this easy?)

@@ -75,7 +75,7 @@ func NewFileLogWriter(fname string, rotate bool) *FileLogWriter {
 	go func() {
 		defer func() {
 			if w.file != nil {
-				fmt.Fprint(w.file, FormatLogRecord(w.trailer, &LogRecord{Created: time.Nanoseconds()}))
+				fmt.Fprint(w.file, FormatLogRecord(w.trailer, &LogRecord{Created: time.Now()}))
 				w.file.Close()
 			}
 		}()
@@ -91,9 +91,10 @@ func NewFileLogWriter(fname string, rotate bool) *FileLogWriter {
 				if !ok {
 					return
 				}
+				now := time.Now()
 				if (w.maxlines > 0 && w.maxlines_curlines >= w.maxlines) ||
 					(w.maxsize > 0 && w.maxsize_cursize >= w.maxsize) ||
-					(w.daily && time.LocalTime().Day != w.daily_opendate) {
+					(w.daily && now.Day() != w.daily_opendate) {
 					if err := w.intRotate(); err != nil {
 						fmt.Fprintf(os.Stderr, "FileLogWriter(%q): %s\n", w.filename, err)
 						return
@@ -123,10 +124,10 @@ func (w *FileLogWriter) Rotate() {
 }
 
 // If this is called in a threaded context, it MUST be synchronized
-func (w *FileLogWriter) intRotate() os.Error {
+func (w *FileLogWriter) intRotate() error {
 	// Close any log file that may be open
 	if w.file != nil {
-		fmt.Fprint(w.file, FormatLogRecord(w.trailer, &LogRecord{Created: time.Nanoseconds()}))
+		fmt.Fprint(w.file, FormatLogRecord(w.trailer, &LogRecord{Created: time.Now()}))
 		w.file.Close()
 	}
 
@@ -160,10 +161,12 @@ func (w *FileLogWriter) intRotate() os.Error {
 		return err
 	}
 	w.file = fd
-	fmt.Fprint(w.file, FormatLogRecord(w.header, &LogRecord{Created: time.Nanoseconds()}))
+
+	now := time.Now()
+	fmt.Fprint(w.file, FormatLogRecord(w.header, &LogRecord{Created: now}))
 
 	// Set the daily open date to the current date
-	w.daily_opendate = time.LocalTime().Day
+	w.daily_opendate = now.Day()
 
 	// initialize rotation values
 	w.maxlines_curlines = 0
@@ -185,7 +188,7 @@ func (w *FileLogWriter) SetFormat(format string) *FileLogWriter {
 func (w *FileLogWriter) SetHeadFoot(head, foot string) *FileLogWriter {
 	w.header, w.trailer = head, foot
 	if w.maxlines_curlines == 0 {
-		fmt.Fprint(w.file, FormatLogRecord(w.header, &LogRecord{Created: time.Nanoseconds()}))
+		fmt.Fprint(w.file, FormatLogRecord(w.header, &LogRecord{Created: time.Now()}))
 	}
 	return w
 }

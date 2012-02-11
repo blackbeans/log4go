@@ -3,10 +3,10 @@
 package log4go
 
 import (
-	"os"
+	"encoding/json"
 	"fmt"
 	"net"
-	"json"
+	"os"
 )
 
 // This log writer sends output to a socket

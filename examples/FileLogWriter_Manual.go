@@ -1,13 +1,14 @@
 package main
 
 import (
-	"os"
-	"fmt"
-	"time"
 	"bufio"
+	"fmt"
+	"io"
+	"os"
+	"time"
 )
 
-import l4g "log4go.googlecode.com/svn/stable"
+import l4g "code.google.com/p/log4go"
 
 const (
 	filename = "flw.log"
@@ -32,7 +33,7 @@ func main() {
 
 	// Log some experimental messages
 	log.Finest("Everything is created now (notice that I will not be printing to the file)")
-	log.Info("The time is now: %s", time.LocalTime().Format("15:04:05 MST 2006/01/02"))
+	log.Info("The time is now: %s", time.Now().Format("15:04:05 MST 2006/01/02"))
 	log.Critical("Time to close out!")
 
 	// Close the log
@@ -44,7 +45,7 @@ func main() {
 	fmt.Print("Messages logged to file were: (line numbers not included)\n")
 	for lineno := 1; ; lineno++ {
 		line, err := in.ReadString('\n')
-		if err == os.EOF {
+		if err == io.EOF {
 			break
 		}
 		fmt.Printf("%3d:\t%s", lineno, line)

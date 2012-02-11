@@ -5,7 +5,6 @@ package log4go
 import (
 	"fmt"
 	"bytes"
-	"time"
 	"io"
 )
 
@@ -13,13 +12,6 @@ const (
 	FORMAT_DEFAULT = "[%D %T] [%L] (%S) %M"
 	FORMAT_SHORT   = "[%t %d] [%L] %M"
 	FORMAT_ABBREV  = "[%L] %M"
-)
-
-var (
-	// TimeConversionFunction specifies what function to call to
-	// convert from seconds into a *time.Time.  Change this to
-	// time.SecondsToUTC for UTC stamped logs
-	TimeConversionFunction = time.SecondsToLocalTime
 )
 
 type formatCacheType struct {
@@ -47,18 +39,20 @@ func FormatLogRecord(format string, rec *LogRecord) string {
 		return ""
 	}
 
-	out := new(bytes.Buffer)
-	secs := rec.Created / 1e9
+	out := bytes.NewBuffer(make([]byte, 0, 64))
+	secs := rec.Created.UnixNano() / 1e9
 
 	cache := *formatCache
 	if cache.LastUpdateSeconds != secs {
-		tm := TimeConversionFunction(secs)
+		month, day, year := rec.Created.Month(), rec.Created.Day(), rec.Created.Year()
+		hour, minute, second := rec.Created.Hour(), rec.Created.Minute(), rec.Created.Second()
+		zone, _ := rec.Created.Zone()
 		updated := &formatCacheType{
 			LastUpdateSeconds: secs,
-			shortTime: fmt.Sprintf("%02d:%02d", tm.Hour, tm.Minute),
-			shortDate: fmt.Sprintf("%02d/%02d/%02d", tm.Month, tm.Day, tm.Year%100),
-			longTime: fmt.Sprintf("%02d:%02d:%02d %s", tm.Hour, tm.Minute, tm.Second, tm.Zone),
-			longDate: fmt.Sprintf("%04d/%02d/%02d", tm.Year, tm.Month, tm.Day),
+			shortTime: fmt.Sprintf("%02d:%02d", hour, minute),
+			shortDate: fmt.Sprintf("%02d/%02d/%02d", month, day, year%100),
+			longTime: fmt.Sprintf("%02d:%02d:%02d %s", hour, minute, second, zone),
+			longDate: fmt.Sprintf("%04d/%02d/%02d", year, month, day),
 		}
 		cache = *updated
 		formatCache = updated

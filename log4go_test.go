@@ -16,7 +16,7 @@ import (
 )
 
 const testLogFile = "_logtest.log"
-const now int64 = 1234567890123456789
+var now time.Time = time.Unix(0, 1234567890123456789).In(time.UTC)
 
 func newLogRecord(lvl level, src string, msg string) *LogRecord {
 	return &LogRecord{
@@ -28,8 +28,6 @@ func newLogRecord(lvl level, src string, msg string) *LogRecord {
 }
 
 func TestELog(t *testing.T) {
-	TimeConversionFunction = time.SecondsToUTC
-
 	fmt.Printf("Testing %s\n", L4G_VERSION)
 	lr := newLogRecord(CRITICAL, "source", "message")
 	if lr.Level != CRITICAL {
@@ -191,18 +189,18 @@ func TestLogger(t *testing.T) {
 		t.Fatalf("AddFilter produced invalid logger (incorrect map count)")
 	}
 
-	//func (l *Logger) Warn(format string, args ...interface{}) os.Error {}
-	if err := l.Warn("%s %d %#v", "Warning:", 1, []int{}); err.String() != "Warning: 1 []int{}" {
+	//func (l *Logger) Warn(format string, args ...interface{}) error {}
+	if err := l.Warn("%s %d %#v", "Warning:", 1, []int{}); err.Error() != "Warning: 1 []int{}" {
 		t.Errorf("Warn returned invalid error: %s", err)
 	}
 
-	//func (l *Logger) Error(format string, args ...interface{}) os.Error {}
-	if err := l.Error("%s %d %#v", "Error:", 10, []string{}); err.String() != "Error: 10 []string{}" {
+	//func (l *Logger) Error(format string, args ...interface{}) error {}
+	if err := l.Error("%s %d %#v", "Error:", 10, []string{}); err.Error() != "Error: 10 []string{}" {
 		t.Errorf("Error returned invalid error: %s", err)
 	}
 
-	//func (l *Logger) Critical(format string, args ...interface{}) os.Error {}
-	if err := l.Critical("%s %d %#v", "Critical:", 100, []int64{}); err.String() != "Critical: 100 []int64{}" {
+	//func (l *Logger) Critical(format string, args ...interface{}) error {}
+	if err := l.Critical("%s %d %#v", "Critical:", 100, []int64{}); err.Error() != "Critical: 100 []int64{}" {
 		t.Errorf("Critical returned invalid error: %s", err)
 	}
 
@@ -254,7 +252,7 @@ func TestLogOutput(t *testing.T) {
 
 	sum := md5.New()
 	sum.Write(contents)
-	if sumstr := hex.EncodeToString(sum.Sum()); sumstr != expected {
+	if sumstr := hex.EncodeToString(sum.Sum(nil)); sumstr != expected {
 		t.Errorf("--- Log Contents:\n%s---", string(contents))
 		t.Fatalf("Checksum does not match: %s (expecting %s)", sumstr, expected)
 	}
@@ -262,39 +260,44 @@ func TestLogOutput(t *testing.T) {
 
 func TestCountMallocs(t *testing.T) {
 	const N = 1
+	var m runtime.MemStats
+	getMallocs := func() uint64 {
+		runtime.ReadMemStats(&m)
+		return m.Mallocs
+	}
 
 	// Console logger
 	sl := NewDefaultLogger(INFO)
-	mallocs := 0 - runtime.MemStats.Mallocs
+	mallocs := 0 - getMallocs()
 	for i := 0; i < N; i++ {
 		sl.Log(WARNING, "here", "This is a WARNING message")
 	}
-	mallocs += runtime.MemStats.Mallocs
+	mallocs += getMallocs()
 	fmt.Printf("mallocs per sl.Log((WARNING, \"here\", \"This is a log message\"): %d\n", mallocs/N)
 
 	// Console logger formatted
-	mallocs = 0 - runtime.MemStats.Mallocs
+	mallocs = 0 - getMallocs()
 	for i := 0; i < N; i++ {
 		sl.Logf(WARNING, "%s is a log message with level %d", "This", WARNING)
 	}
-	mallocs += runtime.MemStats.Mallocs
+	mallocs += getMallocs()
 	fmt.Printf("mallocs per sl.Logf(WARNING, \"%%s is a log message with level %%d\", \"This\", WARNING): %d\n", mallocs/N)
 
 	// Console logger (not logged)
 	sl = NewDefaultLogger(INFO)
-	mallocs = 0 - runtime.MemStats.Mallocs
+	mallocs = 0 - getMallocs()
 	for i := 0; i < N; i++ {
 		sl.Log(DEBUG, "here", "This is a DEBUG log message")
 	}
-	mallocs += runtime.MemStats.Mallocs
+	mallocs += getMallocs()
 	fmt.Printf("mallocs per unlogged sl.Log((WARNING, \"here\", \"This is a log message\"): %d\n", mallocs/N)
 
 	// Console logger formatted (not logged)
-	mallocs = 0 - runtime.MemStats.Mallocs
+	mallocs = 0 - getMallocs()
 	for i := 0; i < N; i++ {
 		sl.Logf(DEBUG, "%s is a log message with level %d", "This", DEBUG)
 	}
-	mallocs += runtime.MemStats.Mallocs
+	mallocs += getMallocs()
 	fmt.Printf("mallocs per unlogged sl.Logf(WARNING, \"%%s is a log message with level %%d\", \"This\", WARNING): %d\n", mallocs/N)
 }
 
@@ -322,7 +325,7 @@ func TestXMLConfig(t *testing.T) {
 	fmt.Fprintln(fd, "    <property name=\"filename\">test.log</property>")
 	fmt.Fprintln(fd, "    <!--")
 	fmt.Fprintln(fd, "       %T - Time (15:04:05 MST)")
-	fmt.Fprintln(fd, "       %testing - Time (15:04)")
+	fmt.Fprintln(fd, "       %t - Time (15:04)")
 	fmt.Fprintln(fd, "       %D - Date (2006/01/02)")
 	fmt.Fprintln(fd, "       %d - Date (01/02/06)")
 	fmt.Fprintln(fd, "       %L - Level (FNST, FINE, DEBG, TRAC, WARN, EROR, CRIT)")
@@ -347,7 +350,7 @@ func TestXMLConfig(t *testing.T) {
 	fmt.Fprintln(fd, "    <property name=\"maxrecords\">6K</property> <!-- \\d+[KMG]? Suffixes are in terms of thousands -->")
 	fmt.Fprintln(fd, "    <property name=\"daily\">false</property> <!-- Automatically rotates when a log message is written after midnight -->")
 	fmt.Fprintln(fd, "  </filter>")
-	fmt.Fprintln(fd, "  <filter enabled=\"false\"><!-- enabled=false means this logger won'testing actually be created -->")
+	fmt.Fprintln(fd, "  <filter enabled=\"false\"><!-- enabled=false means this logger won't actually be created -->")
 	fmt.Fprintln(fd, "    <tag>donotopen</tag>")
 	fmt.Fprintln(fd, "    <type>socket</type>")
 	fmt.Fprintln(fd, "    <level>FINEST</level>")
@@ -424,7 +427,7 @@ func BenchmarkFormatLogRecord(b *testing.B) {
 		Message: "message",
 	}
 	for i := 0; i < b.N; i++ {
-		rec.Created += 1e9/updateEvery
+		rec.Created = rec.Created.Add(1*time.Second/updateEvery)
 		if i % 2 == 0 {
 			FormatLogRecord(FORMAT_DEFAULT, rec)
 		} else {
@@ -438,8 +441,8 @@ func BenchmarkConsoleLog(b *testing.B) {
 	if err != nil {
 		panic(err)
 	}
-	if err := syscall.Dup2(sink.Fd(), syscall.Stdout); err != 0 {
-		panic(os.Errno(err))
+	if err := syscall.Dup2(int(sink.Fd()), syscall.Stdout); err != nil {
+		panic(err)
 	}
 
 	sl := NewDefaultLogger(INFO)

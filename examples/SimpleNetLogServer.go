@@ -1,17 +1,17 @@
 package main
 
 import (
-	"os"
+	"flag"
 	"fmt"
 	"net"
-	"flag"
+	"os"
 )
 
 var (
 	port = flag.String("p", "12124", "Port number to listen on")
 )
 
-func e(err os.Error) {
+func e(err error) {
 	if err != nil {
 		fmt.Printf("Erroring out: %s\n", err)
 		os.Exit(1)
