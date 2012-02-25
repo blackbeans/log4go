@@ -15,6 +15,7 @@ import (
 )
 
 const testLogFile = "_logtest.log"
+
 var now time.Time = time.Unix(0, 1234567890123456789).In(time.UTC)
 
 func newLogRecord(lvl level, src string, msg string) *LogRecord {
@@ -426,8 +427,8 @@ func BenchmarkFormatLogRecord(b *testing.B) {
 		Message: "message",
 	}
 	for i := 0; i < b.N; i++ {
-		rec.Created = rec.Created.Add(1*time.Second/updateEvery)
-		if i % 2 == 0 {
+		rec.Created = rec.Created.Add(1 * time.Second / updateEvery)
+		if i%2 == 0 {
 			FormatLogRecord(FORMAT_DEFAULT, rec)
 		} else {
 			FormatLogRecord(FORMAT_SHORT, rec)
@@ -466,7 +467,6 @@ func BenchmarkConsoleUtilLog(b *testing.B) {
 		sl.Info("%s is a log message", "This")
 	}
 }
-
 
 func BenchmarkConsoleUtilNotLog(b *testing.B) {
 	sl := NewDefaultLogger(INFO)

@@ -76,7 +76,6 @@ const (
 	CRITICAL
 )
 
-
 // Logging level strings
 var (
 	levelStrings = [...]string{"FNST", "FINE", "DEBG", "TRAC", "INFO", "WARN", "EROR", "CRIT"}

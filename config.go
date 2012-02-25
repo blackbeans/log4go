@@ -17,15 +17,15 @@ type xmlProperty struct {
 }
 
 type xmlFilter struct {
-	Enabled  string `xml:"enabled,attr"`
-	Tag      string `xml:"tag"`
-	Level    string `xml:"level"`
-	Type     string `xml:"type"`
+	Enabled  string        `xml:"enabled,attr"`
+	Tag      string        `xml:"tag"`
+	Level    string        `xml:"level"`
+	Type     string        `xml:"type"`
 	Property []xmlProperty `xml:"property"`
 }
 
 type xmlLoggerConfig struct {
-	Filter  []xmlFilter `xml:"filter"`
+	Filter []xmlFilter `xml:"filter"`
 }
 
 // Load XML configuration; see examples/example.xml for documentation

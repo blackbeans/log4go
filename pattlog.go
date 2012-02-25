@@ -15,10 +15,11 @@ const (
 )
 
 type formatCacheType struct {
-	LastUpdateSeconds int64
+	LastUpdateSeconds    int64
 	shortTime, shortDate string
-	longTime, longDate string
+	longTime, longDate   string
 }
+
 var formatCache = &formatCacheType{}
 
 // Known format codes:
@@ -49,10 +50,10 @@ func FormatLogRecord(format string, rec *LogRecord) string {
 		zone, _ := rec.Created.Zone()
 		updated := &formatCacheType{
 			LastUpdateSeconds: secs,
-			shortTime: fmt.Sprintf("%02d:%02d", hour, minute),
-			shortDate: fmt.Sprintf("%02d/%02d/%02d", month, day, year%100),
-			longTime: fmt.Sprintf("%02d:%02d:%02d %s", hour, minute, second, zone),
-			longDate: fmt.Sprintf("%04d/%02d/%02d", year, month, day),
+			shortTime:         fmt.Sprintf("%02d:%02d", hour, minute),
+			shortDate:         fmt.Sprintf("%02d/%02d/%02d", month, day, year%100),
+			longTime:          fmt.Sprintf("%02d:%02d:%02d %s", hour, minute, second, zone),
+			longDate:          fmt.Sprintf("%04d/%02d/%02d", year, month, day),
 		}
 		cache = *updated
 		formatCache = updated
