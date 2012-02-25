@@ -1,5 +1,7 @@
 // Copyright (C) 2010, Kyle Lemons <kyle@kylelemons.net>.  All rights reserved.
 
+// Package log4go provides level-based and highly configurable logging.
+//
 // Enhanced Logging
 //
 // This is inspired by the logging functionality in Java.  Essentially, you create a Logger
