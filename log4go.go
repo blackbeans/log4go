@@ -47,11 +47,11 @@ package log4go
 
 import (
 	"errors"
-	"os"
 	"fmt"
-	"time"
-	"strings"
+	"os"
 	"runtime"
+	"strings"
+	"time"
 )
 
 // Version information
@@ -458,6 +458,54 @@ func (log Logger) Error(arg0 interface{}, args ...interface{}) error {
 	}
 	log.intLogf(lvl, msg)
 	return errors.New(msg)
+}
+
+// Error logs a message at the error log level and returns the formatted error,
+// See Warn for an explanation of the performance and Debug for an explanation
+// of the parameters.
+func (log Logger) ErrorLog(logname string, arg0 interface{}, args ...interface{}) error {
+	const (
+		lvl = ERROR
+	)
+	var msg string
+	switch first := arg0.(type) {
+	case string:
+		// Use the string as a format string
+		msg = fmt.Sprintf(first, args...)
+	case func() string:
+		// Log the closure (no other arguments used)
+		return errors.New("unsupport ErrorLog closure!")
+	default:
+		// Build a format string so that it will be similar to Sprint
+		msg = fmt.Sprintf(fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
+	}
+
+	l, ok := log[logname]
+	if !ok {
+		return errors.New("no log filter")
+	}
+	// Determine caller func
+	pc, _, lineno, ok := runtime.Caller(2)
+	src := ""
+	if ok {
+		src = fmt.Sprintf("%s:%d", runtime.FuncForPC(pc).Name(), lineno)
+	}
+
+	if len(args) > 0 {
+		msg = fmt.Sprintf(msg, args...)
+	}
+
+	// Make the log record
+	rec := &LogRecord{
+		Level:   lvl,
+		Created: time.Now(),
+		Source:  src,
+		Message: msg,
+	}
+
+	//log record
+	l.LogWrite(rec)
+	return nil
 }
 
 // Critical logs a message at the critical log level and returns the formatted error,
