@@ -4,8 +4,8 @@ package log4go
 
 import (
 	"errors"
-	"os"
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -247,6 +247,31 @@ func Error(arg0 interface{}, args ...interface{}) error {
 	default:
 		// Build a format string so that it will be similar to Sprint
 		Global.intLogf(lvl, fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
+		return errors.New(fmt.Sprint(first) + fmt.Sprintf(strings.Repeat(" %v", len(args)), args...))
+	}
+	return nil
+}
+
+// Utility for error log messages (returns an error for easy function returns) (see Debug() for parameter explanation)
+// These functions will execute a closure exactly once, to build the error message for the return
+// Wrapper for (*Logger).Error
+func ErrorLog(logname string, arg0 interface{}, args ...interface{}) error {
+	const (
+		lvl = ERROR
+	)
+	switch first := arg0.(type) {
+	case string:
+		// Use the string as a format string
+		Global.intLogNamef(logname, lvl, first, args...)
+		return errors.New(fmt.Sprintf(first, args...))
+	case func() string:
+		// Log the closure (no other arguments used)
+		str := first()
+		Global.intLogNamef(logname, lvl, "%s", str)
+		return errors.New(str)
+	default:
+		// Build a format string so that it will be similar to Sprint
+		Global.intLogNamef(logname, lvl, fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
 		return errors.New(fmt.Sprint(first) + fmt.Sprintf(strings.Repeat(" %v", len(args)), args...))
 	}
 	return nil

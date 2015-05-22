@@ -295,6 +295,61 @@ func (log Logger) Log(lvl level, source, message string) {
 	}
 }
 
+// Send a formatted log message internally
+func (log Logger) intLogNamef(logname string, lvl level, format string, args ...interface{}) {
+	l, ok := log[logname]
+	if !ok {
+		return
+	}
+
+	// Determine caller func
+	pc, _, lineno, ok := runtime.Caller(2)
+	src := ""
+	if ok {
+		src = fmt.Sprintf("%s:%d", runtime.FuncForPC(pc).Name(), lineno)
+	}
+
+	msg := format
+	if len(args) > 0 {
+		msg = fmt.Sprintf(format, args...)
+	}
+	// Make the log record
+	rec := &LogRecord{
+		Level:   lvl,
+		Created: time.Now(),
+		Source:  src,
+		Message: msg,
+	}
+	// Dispatch the logs
+	l.LogWrite(rec)
+}
+
+// Send a closure log message internally
+func (log Logger) intLogNamec(logname string, lvl level, closure func() string) {
+	l, ok := log[logname]
+	if !ok {
+		return
+	}
+
+	// Determine caller func
+	pc, _, lineno, ok := runtime.Caller(2)
+	src := ""
+	if ok {
+		src = fmt.Sprintf("%s:%d", runtime.FuncForPC(pc).Name(), lineno)
+	}
+
+	// Make the log record
+	rec := &LogRecord{
+		Level:   lvl,
+		Created: time.Now(),
+		Source:  src,
+		Message: closure(),
+	}
+
+	// Dispatch the logs
+	l.LogWrite(rec)
+}
+
 // Logf logs a formatted log message at the given log level, using the caller as
 // its source.
 func (log Logger) Logf(lvl level, format string, args ...interface{}) {
@@ -458,54 +513,6 @@ func (log Logger) Error(arg0 interface{}, args ...interface{}) error {
 	}
 	log.intLogf(lvl, msg)
 	return errors.New(msg)
-}
-
-// Error logs a message at the error log level and returns the formatted error,
-// See Warn for an explanation of the performance and Debug for an explanation
-// of the parameters.
-func (log Logger) ErrorLog(logname string, arg0 interface{}, args ...interface{}) error {
-	const (
-		lvl = ERROR
-	)
-	var msg string
-	switch first := arg0.(type) {
-	case string:
-		// Use the string as a format string
-		msg = fmt.Sprintf(first, args...)
-	case func() string:
-		// Log the closure (no other arguments used)
-		return errors.New("unsupport ErrorLog closure!")
-	default:
-		// Build a format string so that it will be similar to Sprint
-		msg = fmt.Sprintf(fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
-	}
-
-	l, ok := log[logname]
-	if !ok {
-		return errors.New("no log filter")
-	}
-	// Determine caller func
-	pc, _, lineno, ok := runtime.Caller(2)
-	src := ""
-	if ok {
-		src = fmt.Sprintf("%s:%d", runtime.FuncForPC(pc).Name(), lineno)
-	}
-
-	if len(args) > 0 {
-		msg = fmt.Sprintf(msg, args...)
-	}
-
-	// Make the log record
-	rec := &LogRecord{
-		Level:   lvl,
-		Created: time.Now(),
-		Source:  src,
-		Message: msg,
-	}
-
-	//log record
-	l.LogWrite(rec)
-	return nil
 }
 
 // Critical logs a message at the critical log level and returns the formatted error,
