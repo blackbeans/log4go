@@ -142,6 +142,24 @@ func Fine(arg0 interface{}, args ...interface{}) {
 	}
 }
 
+func innerLog(lvl level, logname string, arg0 interface{}, args ...interface{}) error {
+	switch first := arg0.(type) {
+	case string:
+		// Use the string as a format string
+		Global.intLogNamef(logname, lvl, first, args...)
+		return errors.New(fmt.Sprintf(first, args...))
+	case func() string:
+		// Log the closure (no other arguments used)
+		str := first()
+		Global.intLogNamef(logname, lvl, "%s", str)
+		return errors.New(str)
+	default:
+		// Build a format string so that it will be similar to Sprint
+		Global.intLogNamef(logname, lvl, fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
+		return errors.New(fmt.Sprint(first) + fmt.Sprintf(strings.Repeat(" %v", len(args)), args...))
+	}
+}
+
 // Utility for debug log messages
 // When given a string as the first argument, this behaves like Logf but with the DEBUG log level (e.g. the first argument is interpreted as a format for the latter arguments)
 // When given a closure of type func()string, this logs the string returned by the closure iff it will be logged.  The closure runs at most one time.
@@ -164,6 +182,14 @@ func Debug(arg0 interface{}, args ...interface{}) {
 	}
 }
 
+// Utility for error log messages (returns an error for easy function returns) (see Debug() for parameter explanation)
+// These functions will execute a closure exactly once, to build the error message for the return
+// Wrapper for (*Logger).Error
+func DebugLog(logname string, arg0 interface{}, args ...interface{}) error {
+	innerLog(DEBUG, logname, arg0, args...)
+	return nil
+}
+
 // Utility for trace log messages (see Debug() for parameter explanation)
 // Wrapper for (*Logger).Trace
 func Trace(arg0 interface{}, args ...interface{}) {
@@ -183,9 +209,14 @@ func Trace(arg0 interface{}, args ...interface{}) {
 	}
 }
 
+func TraceLog(logname string, arg0 interface{}, args ...interface{}) {
+	innerLog(TRACE, logname, arg0, args...)
+
+}
+
 // Utility for info log messages (see Debug() for parameter explanation)
 // Wrapper for (*Logger).Info
-func Info(arg0 interface{}, args ...interface{}) {
+func Info(logname string, arg0 interface{}, args ...interface{}) {
 	const (
 		lvl = INFO
 	)
@@ -200,6 +231,11 @@ func Info(arg0 interface{}, args ...interface{}) {
 		// Build a format string so that it will be similar to Sprint
 		Global.intLogf(lvl, fmt.Sprint(arg0)+strings.Repeat(" %v", len(args)), args...)
 	}
+}
+
+func InfoLog(logname string, arg0 interface{}, args ...interface{}) {
+	innerLog(INFO, logname, arg0, args...)
+
 }
 
 // Utility for warn log messages (returns an error for easy function returns) (see Debug() for parameter explanation)
@@ -225,6 +261,10 @@ func Warn(arg0 interface{}, args ...interface{}) error {
 		return errors.New(fmt.Sprint(first) + fmt.Sprintf(strings.Repeat(" %v", len(args)), args...))
 	}
 	return nil
+}
+
+func WarnLog(logname string, arg0 interface{}, args ...interface{}) {
+	innerLog(WARNING, logname, arg0, args...)
 }
 
 // Utility for error log messages (returns an error for easy function returns) (see Debug() for parameter explanation)
@@ -256,25 +296,7 @@ func Error(arg0 interface{}, args ...interface{}) error {
 // These functions will execute a closure exactly once, to build the error message for the return
 // Wrapper for (*Logger).Error
 func ErrorLog(logname string, arg0 interface{}, args ...interface{}) error {
-	const (
-		lvl = ERROR
-	)
-	switch first := arg0.(type) {
-	case string:
-		// Use the string as a format string
-		Global.intLogNamef(logname, lvl, first, args...)
-		return errors.New(fmt.Sprintf(first, args...))
-	case func() string:
-		// Log the closure (no other arguments used)
-		str := first()
-		Global.intLogNamef(logname, lvl, "%s", str)
-		return errors.New(str)
-	default:
-		// Build a format string so that it will be similar to Sprint
-		Global.intLogNamef(logname, lvl, fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
-		return errors.New(fmt.Sprint(first) + fmt.Sprintf(strings.Repeat(" %v", len(args)), args...))
-	}
-	return nil
+	return innerLog(ERROR, logname, arg0, args...)
 }
 
 // Utility for critical log messages (returns an error for easy function returns) (see Debug() for parameter explanation)
@@ -300,4 +322,8 @@ func Critical(arg0 interface{}, args ...interface{}) error {
 		return errors.New(fmt.Sprint(first) + fmt.Sprintf(strings.Repeat(" %v", len(args)), args...))
 	}
 	return nil
+}
+
+func CriticalLog(logname string, arg0 interface{}, args ...interface{}) error {
+	return innerLog(CRITICAL, logname, arg0, args...)
 }
