@@ -20,6 +20,28 @@ func init() {
 // Wrapper for (*Logger).LoadConfiguration
 func LoadConfiguration(filename string) {
 	Global.LoadConfiguration(filename)
+	f, ok := Global["stdout"]
+	path := "."
+	if ok {
+		path = strings.TrimRight(f.Path, "/") + "/"
+	} else {
+
+	}
+
+	lvl := []level{DEBUG, INFO, WARNING, ERROR}
+	for _, lv := range lvl {
+		name := logname(lv)
+		_, ok := Global[name]
+		if !ok {
+			writer, good := xmlToFileLogWriter(path+name, nil, true)
+			if good {
+				filter := &Filter{DEBUG, path + name, writer}
+
+				Global[name] = filter
+
+			}
+		}
+	}
 }
 
 // Wrapper for (*Logger).AddFilter

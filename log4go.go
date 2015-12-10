@@ -201,7 +201,7 @@ func logName(lvl level) string {
 	case WARNING:
 		return "warn"
 	case ERROR:
-		return "error"
+		return "stderr"
 
 	}
 	return "stdout"
