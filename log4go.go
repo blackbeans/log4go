@@ -125,6 +125,7 @@ type LogWriter interface {
 // the associated LogWriter.
 type Filter struct {
 	Level level
+	Path  string
 	LogWriter
 }
 
@@ -147,7 +148,7 @@ func NewLogger() Logger {
 func NewConsoleLogger(lvl level) Logger {
 	os.Stderr.WriteString("warning: use of deprecated NewConsoleLogger\n")
 	return Logger{
-		"stdout": &Filter{lvl, NewConsoleLogWriter()},
+		"stdout": &Filter{lvl, ".", NewConsoleLogWriter()},
 	}
 }
 
@@ -155,7 +156,7 @@ func NewConsoleLogger(lvl level) Logger {
 // or above lvl to standard output.
 func NewDefaultLogger(lvl level) Logger {
 	return Logger{
-		"stdout": &Filter{lvl, NewConsoleLogWriter()},
+		"stdout": &Filter{lvl, ".", NewConsoleLogWriter()},
 	}
 }
 
@@ -175,127 +176,40 @@ func (log Logger) Close() {
 // higher.  This function should not be called from multiple goroutines.
 // Returns the logger for chaining.
 func (log Logger) AddFilter(name string, lvl level, writer LogWriter) Logger {
-	log[name] = &Filter{lvl, writer}
+	log[name] = &Filter{lvl, ".", writer}
 	return log
 }
 
 /******* Logging *******/
 // Send a formatted log message internally
 func (log Logger) intLogf(lvl level, format string, args ...interface{}) {
-	skip := true
-
-	// Determine if any logging will be done
-	for _, filt := range log {
-		if lvl >= filt.Level {
-			skip = false
-			break
-		}
-	}
-	if skip {
-		return
-	}
-
-	// Determine caller func
-	pc, _, lineno, ok := runtime.Caller(2)
-	src := ""
-	if ok {
-		src = fmt.Sprintf("%s:%d", runtime.FuncForPC(pc).Name(), lineno)
-	}
-
-	msg := format
-	if len(args) > 0 {
-		msg = fmt.Sprintf(format, args...)
-	}
-
-	// Make the log record
-	rec := &LogRecord{
-		Level:   lvl,
-		Created: time.Now(),
-		Source:  src,
-		Message: msg,
-	}
-
-	// Dispatch the logs
-	for _, filt := range log {
-		if lvl < filt.Level {
-			continue
-		}
-		filt.LogWrite(rec)
-		break
-	}
+	log.intLogNamef(logName(lvl), lvl, format, args...)
 }
 
 // Send a closure log message internally
 func (log Logger) intLogc(lvl level, closure func() string) {
-	skip := true
 
-	// Determine if any logging will be done
-	for _, filt := range log {
-		if lvl >= filt.Level {
-			skip = false
-			break
-		}
-	}
-	if skip {
-		return
-	}
+	log.intLogNamec(logName(lvl), lvl, closure)
+}
 
-	// Determine caller func
-	pc, _, lineno, ok := runtime.Caller(2)
-	src := ""
-	if ok {
-		src = fmt.Sprintf("%s:%d", runtime.FuncForPC(pc).Name(), lineno)
-	}
+func logName(lvl level) string {
+	switch lvl {
+	case FINEST, FINE, DEBUG, TRACE:
+		return "debug"
+	case INFO:
+		return "info"
+	case WARNING:
+		return "warn"
+	case ERROR:
+		return "error"
 
-	// Make the log record
-	rec := &LogRecord{
-		Level:   lvl,
-		Created: time.Now(),
-		Source:  src,
-		Message: closure(),
 	}
-
-	// Dispatch the logs
-	for _, filt := range log {
-		if lvl < filt.Level {
-			continue
-		}
-		filt.LogWrite(rec)
-		break
-	}
+	return "stdout"
 }
 
 // Send a log message with manual level, source, and message.
 func (log Logger) Log(lvl level, source, message string) {
-	skip := true
-
-	// Determine if any logging will be done
-	for _, filt := range log {
-		if lvl >= filt.Level {
-			skip = false
-			break
-		}
-	}
-	if skip {
-		return
-	}
-
-	// Make the log record
-	rec := &LogRecord{
-		Level:   lvl,
-		Created: time.Now(),
-		Source:  source,
-		Message: message,
-	}
-
-	// Dispatch the logs
-	for _, filt := range log {
-		if lvl < filt.Level {
-			continue
-		}
-		filt.LogWrite(rec)
-		break
-	}
+	log.intLogNamef(logName(lvl), lvl, message)
 }
 
 // Send a formatted log message internally
