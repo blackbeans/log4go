@@ -20,6 +20,7 @@ func init() {
 // Wrapper for (*Logger).LoadConfiguration
 func LoadConfiguration(filename string) {
 	Global.LoadConfiguration(filename)
+	fmt.Printf("LoadConfiguration|GOLABL FILTER|%s\n", Global)
 	f, ok := Global["stdout"]
 	path := "./logs/"
 	l := INFO
