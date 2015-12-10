@@ -103,13 +103,14 @@ func (log Logger) LoadConfiguration(filename string) {
 			os.Exit(1)
 		}
 
+		file := "./logs/"
 		switch xmlfilt.Type {
 		case "console":
 			filt, good = xmlToConsoleLogWriter(filename, xmlfilt.Property, enabled)
 		case "file":
-			filt, good = xmlToFileLogWriter(filename, xmlfilt.Property, enabled)
+			filt, file, good = xmlToFileLogWriter(filename, xmlfilt.Property, enabled)
 		case "xml":
-			filt, good = xmlToXMLLogWriter(filename, xmlfilt.Property, enabled)
+			filt, file, good = xmlToXMLLogWriter(filename, xmlfilt.Property, enabled)
 		case "socket":
 			filt, good = xmlToSocketLogWriter(filename, xmlfilt.Property, enabled)
 		default:
@@ -127,7 +128,7 @@ func (log Logger) LoadConfiguration(filename string) {
 			continue
 		}
 
-		log[xmlfilt.Tag] = &Filter{lvl, filename, filt}
+		log[xmlfilt.Tag] = &Filter{lvl, file, filt}
 	}
 }
 
@@ -167,7 +168,7 @@ func strToNumSuffix(str string, mult int) int {
 	parsed, _ := strconv.Atoi(str)
 	return parsed * num
 }
-func xmlToFileLogWriter(filename string, props []xmlProperty, enabled bool) (*FileLogWriter, bool) {
+func xmlToFileLogWriter(filename string, props []xmlProperty, enabled bool) (*FileLogWriter, string, bool) {
 	file := ""
 	format := "[%D %T] [%L] (%S) %M"
 	maxlines := 0
@@ -198,12 +199,12 @@ func xmlToFileLogWriter(filename string, props []xmlProperty, enabled bool) (*Fi
 	// Check properties
 	if len(file) == 0 {
 		fmt.Fprintf(os.Stderr, "LoadConfiguration: Error: Required property \"%s\" for file filter missing in %s\n", "filename", filename)
-		return nil, false
+		return nil, file, false
 	}
 
 	// If it's disabled, we're just checking syntax
 	if !enabled {
-		return nil, true
+		return nil, file, true
 	}
 
 	flw := NewFileLogWriter(file, rotate)
@@ -211,10 +212,10 @@ func xmlToFileLogWriter(filename string, props []xmlProperty, enabled bool) (*Fi
 	flw.SetRotateLines(maxlines)
 	flw.SetRotateSize(maxsize)
 	flw.SetRotateDaily(daily)
-	return flw, true
+	return flw, file, true
 }
 
-func xmlToXMLLogWriter(filename string, props []xmlProperty, enabled bool) (*FileLogWriter, bool) {
+func xmlToXMLLogWriter(filename string, props []xmlProperty, enabled bool) (*FileLogWriter, string, bool) {
 	file := ""
 	maxrecords := 0
 	maxsize := 0
@@ -242,19 +243,19 @@ func xmlToXMLLogWriter(filename string, props []xmlProperty, enabled bool) (*Fil
 	// Check properties
 	if len(file) == 0 {
 		fmt.Fprintf(os.Stderr, "LoadConfiguration: Error: Required property \"%s\" for xml filter missing in %s\n", "filename", filename)
-		return nil, false
+		return nil, file, false
 	}
 
 	// If it's disabled, we're just checking syntax
 	if !enabled {
-		return nil, true
+		return nil, file, true
 	}
 
 	xlw := NewXMLLogWriter(file, rotate)
 	xlw.SetRotateLines(maxrecords)
 	xlw.SetRotateSize(maxsize)
 	xlw.SetRotateDaily(daily)
-	return xlw, true
+	return xlw, file, true
 }
 
 func xmlToSocketLogWriter(filename string, props []xmlProperty, enabled bool) (SocketLogWriter, bool) {

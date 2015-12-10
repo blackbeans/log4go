@@ -40,7 +40,7 @@ func LoadConfiguration(filename string) {
 		if !ok {
 			file := path + name + ".log"
 			prop := []xmlProperty{xmlProperty{"filename", file}}
-			writer, good := xmlToFileLogWriter(file, prop, true)
+			writer, _, good := xmlToFileLogWriter(file, prop, true)
 			if good {
 				filter := &Filter{DEBUG, file, writer}
 				Global[name] = filter
