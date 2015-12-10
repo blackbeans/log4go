@@ -148,7 +148,7 @@ func NewLogger() Logger {
 func NewConsoleLogger(lvl level) Logger {
 	os.Stderr.WriteString("warning: use of deprecated NewConsoleLogger\n")
 	return Logger{
-		"stdout": &Filter{lvl, ".", NewConsoleLogWriter()},
+		"stdout": &Filter{lvl, "./logs/stdout.log", NewConsoleLogWriter()},
 	}
 }
 
@@ -156,7 +156,7 @@ func NewConsoleLogger(lvl level) Logger {
 // or above lvl to standard output.
 func NewDefaultLogger(lvl level) Logger {
 	return Logger{
-		"stdout": &Filter{lvl, ".", NewConsoleLogWriter()},
+		"stdout": &Filter{lvl, "./logs/stdout.log", NewConsoleLogWriter()},
 	}
 }
 
@@ -176,7 +176,7 @@ func (log Logger) Close() {
 // higher.  This function should not be called from multiple goroutines.
 // Returns the logger for chaining.
 func (log Logger) AddFilter(name string, lvl level, writer LogWriter) Logger {
-	log[name] = &Filter{lvl, ".", writer}
+	log[name] = &Filter{lvl, "./logs/" + name + ".log", writer}
 	return log
 }
 

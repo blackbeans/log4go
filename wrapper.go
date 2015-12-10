@@ -38,9 +38,11 @@ func LoadConfiguration(filename string) {
 		name := logName(lv)
 		_, ok := Global[name]
 		if !ok {
-			writer, good := xmlToFileLogWriter(path+name+".log", nil, true)
+			file := path + name + ".log"
+			prop := []xmlProperty{xmlProperty{"filename", file}}
+			writer, good := xmlToFileLogWriter(file, prop, true)
 			if good {
-				filter := &Filter{DEBUG, path + name + ".log", writer}
+				filter := &Filter{DEBUG, file, writer}
 				Global[name] = filter
 				fmt.Printf("LoadConfiguration|Create LOG|SUCC|%s\n", path+name+".log")
 			}
