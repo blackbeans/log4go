@@ -10,3 +10,12 @@ import l4g "log4go.googlecode.com/hg"
 Acknowledgements:
 - pomack
   For providing awesome patches to bring log4go up to the latest Go spec
+  
+  
+More：
+- 增加根据log.xml配置的filter配置输出到不同LOG文件
+  exp:
+  log.DebugLog("kite_handler",format,args...)
+  log.InfoLog("kite_handler",format,args...)
+  log.WarnLog("kite_handler",format,args...)
+  log.ErrorLog("kite_handler",format,args...)
