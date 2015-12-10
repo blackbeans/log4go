@@ -221,6 +221,7 @@ func (log Logger) intLogf(lvl level, format string, args ...interface{}) {
 			continue
 		}
 		filt.LogWrite(rec)
+		break
 	}
 }
 
@@ -260,6 +261,7 @@ func (log Logger) intLogc(lvl level, closure func() string) {
 			continue
 		}
 		filt.LogWrite(rec)
+		break
 	}
 }
 
@@ -292,6 +294,7 @@ func (log Logger) Log(lvl level, source, message string) {
 			continue
 		}
 		filt.LogWrite(rec)
+		break
 	}
 }
 
