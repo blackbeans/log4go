@@ -30,7 +30,7 @@ func LoadConfiguration(filename string) {
 
 	lvl := []level{DEBUG, INFO, WARNING, ERROR}
 	for _, lv := range lvl {
-		name := logname(lv)
+		name := logName(lv)
 		_, ok := Global[name]
 		if !ok {
 			writer, good := xmlToFileLogWriter(path+name, nil, true)
