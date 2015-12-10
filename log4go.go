@@ -302,6 +302,11 @@ func (log Logger) intLogNamef(logname string, lvl level, format string, args ...
 		return
 	}
 
+	//log level less than  filter level ignored
+	if lvl < l.Level {
+		return
+	}
+
 	// Determine caller func
 	pc, _, lineno, ok := runtime.Caller(2)
 	src := ""
@@ -313,6 +318,7 @@ func (log Logger) intLogNamef(logname string, lvl level, format string, args ...
 	if len(args) > 0 {
 		msg = fmt.Sprintf(format, args...)
 	}
+
 	// Make the log record
 	rec := &LogRecord{
 		Level:   lvl,
@@ -320,6 +326,7 @@ func (log Logger) intLogNamef(logname string, lvl level, format string, args ...
 		Source:  src,
 		Message: msg,
 	}
+
 	// Dispatch the logs
 	l.LogWrite(rec)
 }
@@ -328,6 +335,10 @@ func (log Logger) intLogNamef(logname string, lvl level, format string, args ...
 func (log Logger) intLogNamec(logname string, lvl level, closure func() string) {
 	l, ok := log[logname]
 	if !ok {
+		return
+	}
+	//log level less than  filter level ignored
+	if lvl < l.Level {
 		return
 	}
 
