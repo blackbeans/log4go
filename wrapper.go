@@ -142,24 +142,6 @@ func Fine(arg0 interface{}, args ...interface{}) {
 	}
 }
 
-func innerLog(lvl level, logname string, arg0 interface{}, args ...interface{}) error {
-	switch first := arg0.(type) {
-	case string:
-		// Use the string as a format string
-		Global.intLogNamef(logname, lvl, first, args...)
-		return errors.New(fmt.Sprintf(first, args...))
-	case func() string:
-		// Log the closure (no other arguments used)
-		str := first()
-		Global.intLogNamef(logname, lvl, "%s", str)
-		return errors.New(str)
-	default:
-		// Build a format string so that it will be similar to Sprint
-		Global.intLogNamef(logname, lvl, fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
-		return errors.New(fmt.Sprint(first) + fmt.Sprintf(strings.Repeat(" %v", len(args)), args...))
-	}
-}
-
 // Utility for debug log messages
 // When given a string as the first argument, this behaves like Logf but with the DEBUG log level (e.g. the first argument is interpreted as a format for the latter arguments)
 // When given a closure of type func()string, this logs the string returned by the closure iff it will be logged.  The closure runs at most one time.
@@ -186,7 +168,20 @@ func Debug(arg0 interface{}, args ...interface{}) {
 // These functions will execute a closure exactly once, to build the error message for the return
 // Wrapper for (*Logger).Error
 func DebugLog(logname string, arg0 interface{}, args ...interface{}) error {
-	innerLog(DEBUG, logname, arg0, args...)
+	const (
+		lvl = DEBUG
+	)
+	switch first := arg0.(type) {
+	case string:
+		// Use the string as a format string
+		Global.intLogNamef(logname, lvl, first, args...)
+	case func() string:
+		// Log the closure (no other arguments used)
+		Global.intLogNamec(logname, lvl, first)
+	default:
+		// Build a format string so that it will be similar to Sprint
+		Global.intLogNamef(logname, lvl, fmt.Sprint(arg0)+strings.Repeat(" %v", len(args)), args...)
+	}
 	return nil
 }
 
@@ -210,7 +205,20 @@ func Trace(arg0 interface{}, args ...interface{}) {
 }
 
 func TraceLog(logname string, arg0 interface{}, args ...interface{}) {
-	innerLog(TRACE, logname, arg0, args...)
+	const (
+		lvl = TRACE
+	)
+	switch first := arg0.(type) {
+	case string:
+		// Use the string as a format string
+		Global.intLogNamef(logname, lvl, first, args...)
+	case func() string:
+		// Log the closure (no other arguments used)
+		Global.intLogNamec(logname, lvl, first)
+	default:
+		// Build a format string so that it will be similar to Sprint
+		Global.intLogNamef(logname, lvl, fmt.Sprint(arg0)+strings.Repeat(" %v", len(args)), args...)
+	}
 
 }
 
@@ -234,7 +242,20 @@ func Info(arg0 interface{}, args ...interface{}) {
 }
 
 func InfoLog(logname string, arg0 interface{}, args ...interface{}) {
-	innerLog(INFO, logname, arg0, args...)
+	const (
+		lvl = INFO
+	)
+	switch first := arg0.(type) {
+	case string:
+		// Use the string as a format string
+		Global.intLogNamef(logname, lvl, first, args...)
+	case func() string:
+		// Log the closure (no other arguments used)
+		Global.intLogNamec(logname, lvl, first)
+	default:
+		// Build a format string so that it will be similar to Sprint
+		Global.intLogNamef(logname, lvl, fmt.Sprint(arg0)+strings.Repeat(" %v", len(args)), args...)
+	}
 
 }
 
@@ -263,8 +284,26 @@ func Warn(arg0 interface{}, args ...interface{}) error {
 	return nil
 }
 
-func WarnLog(logname string, arg0 interface{}, args ...interface{}) {
-	innerLog(WARNING, logname, arg0, args...)
+func WarnLog(logname string, arg0 interface{}, args ...interface{}) error {
+	const (
+		lvl = WARNING
+	)
+	switch first := arg0.(type) {
+	case string:
+		// Use the string as a format string
+		Global.intLogNamef(logname, lvl, first, args...)
+		return errors.New(fmt.Sprintf(first, args...))
+	case func() string:
+		// Log the closure (no other arguments used)
+		str := first()
+		Global.intLogNamef(logname, lvl, "%s", str)
+		return errors.New(str)
+	default:
+		// Build a format string so that it will be similar to Sprint
+		Global.intLogNamef(logname, lvl, fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
+		return errors.New(fmt.Sprint(first) + fmt.Sprintf(strings.Repeat(" %v", len(args)), args...))
+	}
+	return nil
 }
 
 // Utility for error log messages (returns an error for easy function returns) (see Debug() for parameter explanation)
@@ -296,7 +335,25 @@ func Error(arg0 interface{}, args ...interface{}) error {
 // These functions will execute a closure exactly once, to build the error message for the return
 // Wrapper for (*Logger).Error
 func ErrorLog(logname string, arg0 interface{}, args ...interface{}) error {
-	return innerLog(ERROR, logname, arg0, args...)
+	const (
+		lvl = ERROR
+	)
+	switch first := arg0.(type) {
+	case string:
+		// Use the string as a format string
+		Global.intLogNamef(logname, lvl, first, args...)
+		return errors.New(fmt.Sprintf(first, args...))
+	case func() string:
+		// Log the closure (no other arguments used)
+		str := first()
+		Global.intLogNamef(logname, lvl, "%s", str)
+		return errors.New(str)
+	default:
+		// Build a format string so that it will be similar to Sprint
+		Global.intLogNamef(logname, lvl, fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
+		return errors.New(fmt.Sprint(first) + fmt.Sprintf(strings.Repeat(" %v", len(args)), args...))
+	}
+	return nil
 }
 
 // Utility for critical log messages (returns an error for easy function returns) (see Debug() for parameter explanation)
@@ -325,5 +382,23 @@ func Critical(arg0 interface{}, args ...interface{}) error {
 }
 
 func CriticalLog(logname string, arg0 interface{}, args ...interface{}) error {
-	return innerLog(CRITICAL, logname, arg0, args...)
+	const (
+		lvl = CRITICAL
+	)
+	switch first := arg0.(type) {
+	case string:
+		// Use the string as a format string
+		Global.intLogNamef(logname, lvl, first, args...)
+		return errors.New(fmt.Sprintf(first, args...))
+	case func() string:
+		// Log the closure (no other arguments used)
+		str := first()
+		Global.intLogNamef(logname, lvl, "%s", str)
+		return errors.New(str)
+	default:
+		// Build a format string so that it will be similar to Sprint
+		Global.intLogNamef(logname, lvl, fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
+		return errors.New(fmt.Sprint(first) + fmt.Sprintf(strings.Repeat(" %v", len(args)), args...))
+	}
+	return nil
 }
