@@ -216,7 +216,11 @@ func (log Logger) Log(lvl level, source, message string) {
 func (log Logger) intLogNamef(logname string, lvl level, format string, args ...interface{}) {
 	l, ok := log[logname]
 	if !ok {
-		l, _ = log[logName(lvl)]
+		l, ok = log[logName(lvl)]
+		if !ok {
+			fmt.Printf("NO EXIST LOG|%s|%d|%s\n", logname, lvl, logName(lvl))
+			return
+		}
 	}
 
 	//log level less than  filter level ignored
@@ -252,7 +256,11 @@ func (log Logger) intLogNamef(logname string, lvl level, format string, args ...
 func (log Logger) intLogNamec(logname string, lvl level, closure func() string) {
 	l, ok := log[logname]
 	if !ok {
-		l, _ = log[logName(lvl)]
+		l, ok = log[logName(lvl)]
+		if !ok {
+			fmt.Printf("NO EXIST LOG|%s|%d|%s\n", logname, lvl, logName(lvl))
+			return
+		}
 	}
 
 	//log level less than  filter level ignored
