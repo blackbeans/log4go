@@ -23,9 +23,7 @@ func LoadConfiguration(filename string) {
 	f, ok := Global["stdout"]
 	path := "."
 	if ok {
-		path = strings.TrimRight(f.Path, "/") + "/"
-	} else {
-
+		path = f.Path[:strings.LastIndex(f.Path, "/")] + "/"
 	}
 
 	lvl := []level{DEBUG, INFO, WARNING, ERROR}
@@ -33,9 +31,9 @@ func LoadConfiguration(filename string) {
 		name := logName(lv)
 		_, ok := Global[name]
 		if !ok {
-			writer, good := xmlToFileLogWriter(path+name, nil, true)
+			writer, good := xmlToFileLogWriter(path+name+".log", nil, true)
 			if good {
-				filter := &Filter{DEBUG, path + name, writer}
+				filter := &Filter{DEBUG, path + name + ".log", writer}
 
 				Global[name] = filter
 
