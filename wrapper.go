@@ -21,22 +21,27 @@ func init() {
 func LoadConfiguration(filename string) {
 	Global.LoadConfiguration(filename)
 	f, ok := Global["stdout"]
-	path := "."
+	path := "./logs/"
+	l := INFO
 	if ok {
 		path = f.Path[:strings.LastIndex(f.Path, "/")] + "/"
+		l = f.Level
 	}
 
 	lvl := []level{DEBUG, INFO, WARNING, ERROR}
 	for _, lv := range lvl {
+
+		if lv < l {
+			continue
+		}
 		name := logName(lv)
 		_, ok := Global[name]
 		if !ok {
 			writer, good := xmlToFileLogWriter(path+name+".log", nil, true)
 			if good {
 				filter := &Filter{DEBUG, path + name + ".log", writer}
-
 				Global[name] = filter
-
+				fmt.Printf("LoadConfiguration|Create LOG|SUCC|%s\n", path+name+".log")
 			}
 		}
 	}

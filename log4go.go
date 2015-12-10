@@ -217,6 +217,8 @@ func (log Logger) intLogNamef(logname string, lvl level, format string, args ...
 	l, ok := log[logname]
 	if !ok {
 		return
+	} else {
+		l, _ = log["stdout"]
 	}
 
 	//log level less than  filter level ignored
@@ -253,6 +255,8 @@ func (log Logger) intLogNamec(logname string, lvl level, closure func() string) 
 	l, ok := log[logname]
 	if !ok {
 		return
+	} else {
+		l, _ = log["stdout"]
 	}
 	//log level less than  filter level ignored
 	if lvl < l.Level {
