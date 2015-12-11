@@ -15,11 +15,10 @@ var (
 
 func init() {
 	Global = NewDefaultLogger(DEBUG)
+	innerInit()
 }
 
-// Wrapper for (*Logger).LoadConfiguration
-func LoadConfiguration(filename string) {
-	Global.LoadConfiguration(filename)
+func innerInit() {
 	fmt.Printf("LoadConfiguration|GOLABL FILTER|%s\n", Global)
 	f, ok := Global["stdout"]
 	path := "./logs/"
@@ -48,6 +47,12 @@ func LoadConfiguration(filename string) {
 			}
 		}
 	}
+}
+
+// Wrapper for (*Logger).LoadConfiguration
+func LoadConfiguration(filename string) {
+	Global.LoadConfiguration(filename)
+	innerInit()
 }
 
 // Wrapper for (*Logger).AddFilter
