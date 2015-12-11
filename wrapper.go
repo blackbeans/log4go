@@ -28,6 +28,8 @@ func innerInit() {
 		l = f.Level
 	}
 
+	os.MkdirAll(path, os.ModePerm)
+
 	lvl := []level{DEBUG, INFO, WARNING, ERROR}
 	for _, lv := range lvl {
 
