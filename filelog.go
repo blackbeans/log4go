@@ -3,8 +3,8 @@
 package log4go
 
 import (
-	"os"
 	"fmt"
+	"os"
 	"time"
 )
 
@@ -138,9 +138,16 @@ func (w *FileLogWriter) intRotate() error {
 			// Find the next available number
 			num := 1
 			fname := ""
-			for ; err == nil && num <= 999; num++ {
-				fname = w.filename + fmt.Sprintf(".%03d", num)
-				_, err = os.Lstat(fname)
+			if w.daily {
+				if time.Now().Day() != w.daily_opendate {
+					t := time.Now().Add(-24 * time.Hour).Format("2006-01-02")
+					fname = w.filename + fmt.Sprintf(".%s", t)
+				}
+			} else {
+				for ; err == nil && num <= 999; num++ {
+					fname = w.filename + fmt.Sprintf(".%03d", num)
+					_, err = os.Lstat(fname)
+				}
 			}
 			// return error if the last file checked still existed
 			if err == nil {
