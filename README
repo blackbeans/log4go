@@ -12,10 +12,16 @@ Acknowledgements:
   For providing awesome patches to bring log4go up to the latest Go spec
   
   
-More：
-- 增加根据log.xml配置的filter配置输出到不同LOG文件
+More Feature：
+- log to a file as you define
+
+  log.LoadConfiguration("log.xml")
   exp:
   log.DebugLog("kite_handler",format,args...)
   log.InfoLog("kite_handler",format,args...)
   log.WarnLog("kite_handler",format,args...)
   log.ErrorLog("kite_handler",format,args...)
+  
+- log rolling by day
+
+  <property name="daily">true</property> 
