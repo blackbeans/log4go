@@ -59,12 +59,13 @@ func (w *FileLogWriter) Close() {
 //   [%D %T] [%L] (%S) %M
 func NewFileLogWriter(fname string, rotate bool, daily bool) *FileLogWriter {
 	w := &FileLogWriter{
-		rec:      make(chan *LogRecord, LogBufferLength),
-		rot:      make(chan bool),
-		filename: fname,
-		format:   "[%D %T] [%L] (%S) %M",
-		rotate:   rotate,
-		daily:    daily}
+		rec:            make(chan *LogRecord, LogBufferLength),
+		rot:            make(chan bool),
+		filename:       fname,
+		daily_opendate: time.Now().Day(),
+		format:         "[%D %T] [%L] (%S) %M",
+		rotate:         rotate,
+		daily:          daily}
 
 	// open the file for the first time
 	if err := w.intRotate(); err != nil {
@@ -93,10 +94,12 @@ func NewFileLogWriter(fname string, rotate bool, daily bool) *FileLogWriter {
 				}
 				now := time.Now()
 				//如果是开启了并且按天滚动，并且已经换了一天需要重建
-				if w.daily && now.Day() != w.daily_opendate {
-					if err := w.intRotate(); err != nil {
-						fmt.Fprintf(os.Stderr, "FileLogWriter(%q): %s\n", w.filename, err)
-						return
+				if w.daily {
+					if now.Day() != w.daily_opendate {
+						if err := w.intRotate(); err != nil {
+							fmt.Fprintf(os.Stderr, "FileLogWriter(%q): %s\n", w.filename, err)
+							return
+						}
 					}
 				} else if !w.daily && ((w.maxlines > 0 && w.maxlines_curlines >= w.maxlines) ||
 					(w.maxsize > 0 && w.maxsize_cursize >= w.maxsize)) {
@@ -142,7 +145,7 @@ func (w *FileLogWriter) intRotate() error {
 		if err == nil { // file exists
 			// Find the next available number
 			num := 1
-			fname := ""
+			fname := w.filename
 			if w.daily {
 				if time.Now().Day() != w.daily_opendate {
 					t := time.Now().Add(-24 * time.Hour).Format("2006-01-02")
