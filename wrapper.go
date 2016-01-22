@@ -40,7 +40,7 @@ func innerInit() {
 		_, ok := Global[name]
 		if !ok {
 			file := path + name + ".log"
-			prop := []xmlProperty{xmlProperty{"filename", file}}
+			prop := []xmlProperty{xmlProperty{"filename", file}, xmlProperty{"daily", "true"}, xmlProperty{"rotate", "true"}}
 			writer, _, good := xmlToFileLogWriter(file, prop, true)
 			if good {
 				filter := &Filter{DEBUG, file, writer}
