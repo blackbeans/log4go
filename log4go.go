@@ -193,17 +193,6 @@ func (log Logger) intLogc(lvl level, closure func() string) {
 }
 
 func logName(lvl level) string {
-	switch lvl {
-	case FINEST, FINE, DEBUG, TRACE:
-		return "debug"
-	case INFO:
-		return "info"
-	case WARNING:
-		return "warn"
-	case ERROR:
-		return "stderr"
-
-	}
 	return "stdout"
 }
 
@@ -212,19 +201,20 @@ func (log Logger) Log(lvl level, source, message string) {
 	log.intLogNamef(logName(lvl), lvl, message)
 }
 
-// Send a formatted log message internally
-func (log Logger) intLogNamef(logname string, lvl level, format string, args ...interface{}) {
+func (log Logger) getLogger(logname string, lvl level) (*Filter, bool) {
 	l, ok := log[logname]
 	if !ok {
-		l, ok = log[logName(lvl)]
-		if !ok {
-			fmt.Printf("NO EXIST LOG|%s|%d|%s\n", logname, lvl, logName(lvl))
-			return
-		}
+		//use stdout
+		l, ok = log["stdout"]
 	}
+	return l, ok
+}
 
+// Send a formatted log message internally
+func (log Logger) intLogNamef(logname string, lvl level, format string, args ...interface{}) {
+	l, ok := log.getLogger(logname, lvl)
 	//log level less than  filter level ignored
-	if lvl < l.Level {
+	if !ok || lvl < l.Level {
 		return
 	}
 
@@ -254,17 +244,10 @@ func (log Logger) intLogNamef(logname string, lvl level, format string, args ...
 
 // Send a closure log message internally
 func (log Logger) intLogNamec(logname string, lvl level, closure func() string) {
-	l, ok := log[logname]
-	if !ok {
-		l, ok = log[logName(lvl)]
-		if !ok {
-			fmt.Printf("NO EXIST LOG|%s|%d|%s\n", logname, lvl, logName(lvl))
-			return
-		}
-	}
+	l, ok := log.getLogger(logname, lvl)
 
 	//log level less than  filter level ignored
-	if lvl < l.Level {
+	if !ok || lvl < l.Level {
 		return
 	}
 

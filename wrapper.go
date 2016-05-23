@@ -15,51 +15,24 @@ var (
 
 func init() {
 	Global = NewDefaultLogger(DEBUG)
-	innerInit()
-}
-
-func innerInit() {
-	fmt.Printf("LoadConfiguration|GOLABL FILTER|%s\n", Global)
-	f, ok := Global["stdout"]
-	path := "./logs/"
-	l := INFO
-	if ok {
-		path = f.Path[:strings.LastIndex(f.Path, "/")] + "/"
-		l = f.Level
-	}
-
-	os.MkdirAll(path, os.ModePerm)
-
-	lvl := []level{DEBUG, INFO, WARNING, ERROR}
-	for _, lv := range lvl {
-
-		if lv < l {
-			continue
-		}
-		name := logName(lv)
-		_, ok := Global[name]
-		if !ok {
-			file := path + name + ".log"
-			prop := []xmlProperty{xmlProperty{"filename", file}, xmlProperty{"daily", "true"}, xmlProperty{"rotate", "true"}}
-			writer, _, good := xmlToFileLogWriter(file, prop, true)
-			if good {
-				filter := &Filter{DEBUG, file, writer}
-				Global[name] = filter
-				fmt.Printf("LoadConfiguration|Create LOG|SUCC|%s\n", path+name+".log")
-			}
-		}
-	}
+	// innerInit()
 }
 
 // Wrapper for (*Logger).LoadConfiguration
 func LoadConfiguration(filename string) {
 	Global.LoadConfiguration(filename)
-	innerInit()
+
+	//check defualt logger
+	_, ok := Global["stdout"]
+	if !ok {
+		Global["stdout"] = &Filter{INFO, "./logs/", NewConsoleLogWriter()}
+	}
 }
 
 // Wrapper for (*Logger).AddFilter
 func AddFilter(name string, lvl level, writer LogWriter) {
 	Global.AddFilter(name, lvl, writer)
+
 }
 
 // Wrapper for (*Logger).Close (closes and removes all logwriters)

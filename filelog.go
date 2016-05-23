@@ -96,7 +96,6 @@ func NewFileLogWriter(fname string, rotate bool, daily bool) *FileLogWriter {
 				//如果是开启了并且按天滚动，并且已经换了一天需要重建
 				if w.daily {
 					if now.Day() != w.daily_opendate {
-						fmt.Printf("hellow------------now:%d,opendate:%d\n", time.Now().Day(), w.daily_opendate)
 						if err := w.intRotate(); err != nil {
 							fmt.Fprintf(os.Stderr, "FileLogWriter(%q): %s\n", w.filename, err)
 							return
@@ -149,7 +148,6 @@ func (w *FileLogWriter) intRotate() error {
 			fname := w.filename
 			if w.daily {
 				if time.Now().Day() != w.daily_opendate {
-					fmt.Printf("------------now:%d,opendate:%d\n", time.Now().Day(), w.daily_opendate)
 					t := time.Now().Add(-24 * time.Hour).Format("2006-01-02")
 					fname = w.filename + fmt.Sprintf(".%s", t)
 				}
