@@ -185,13 +185,13 @@ func (w *FileLogWriter) intRotate() error {
 				if w.daily {
 					if time.Now().Day() != w.daily_opendate {
 						t := time.Now().Add(-24 * time.Hour).Format("2006-01-02")
-						fname = w.filename + fmt.Sprintf(".%s.%03d", t, num)
+						fname = w.filename + fmt.Sprintf(".%s.%03d.log", t, num)
 					} else {
 						t := time.Now().Format("2006-01-02")
-						fname = w.filename + fmt.Sprintf(".%s.%03d", t, num)
+						fname = w.filename + fmt.Sprintf(".%s.%03d.log", t, num)
 					}
 				} else {
-					fname = w.filename + fmt.Sprintf(".%03d", num)
+					fname = w.filename + fmt.Sprintf(".%03d.log", num)
 				}
 
 				_, err = os.Lstat(fname)
