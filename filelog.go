@@ -191,7 +191,7 @@ func (w *FileLogWriter) intRotate() error {
 						fname = fmt.Sprintf("%s.%s-%03d.log", filename, t, num)
 					}
 				} else {
-					fname = fmt.Sprintf("%s.%s-%03d.log", filename, t, num)
+					fname = fmt.Sprintf("%s.%03d.log", filename, num)
 				}
 
 				_, err = os.Lstat(fname)
