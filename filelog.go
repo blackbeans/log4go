@@ -180,7 +180,7 @@ func (w *FileLogWriter) intRotate() error {
 			// Find the next available number
 			num := 1
 			fname := w.filename
-			filename := strings.TrimSuffix(w.filename, "log")
+			filename := strings.TrimSuffix(w.filename, ".log")
 			for ; err == nil && num <= 999; num++ {
 				if w.daily {
 					if time.Now().Day() != w.daily_opendate {
