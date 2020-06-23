@@ -48,6 +48,7 @@ package log4go
 import (
 	"errors"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
 	"os"
 	"runtime"
 	"strings"
@@ -61,6 +62,25 @@ const (
 	L4G_MINOR   = 0
 	L4G_BUILD   = 1
 )
+
+var (
+	loglevelCounter *prometheus.CounterVec
+)
+
+func init() {
+	loglevelCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "log_level_total",
+		Help: "Total number of a specified loglevel",
+	}, []string{"level"})
+
+	for _, levelString := range levelStrings {
+		loglevelCounter.WithLabelValues(levelString)
+	}
+	err := prometheus.Register(loglevelCounter)
+	if err != nil {
+		panic(err)
+	}
+}
 
 /****** Constants ******/
 
@@ -212,6 +232,9 @@ func (log Logger) getLogger(logname string, lvl level) (*Filter, bool) {
 
 // Send a formatted log message internally
 func (log Logger) intLogNamef(logname string, lvl level, format string, args ...interface{}) {
+
+	loglevelCounter.WithLabelValues(lvl.String()).Inc()
+
 	l, ok := log.getLogger(logname, lvl)
 	//log level less than  filter level ignored
 	if !ok || lvl < l.Level {
