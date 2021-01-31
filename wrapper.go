@@ -3,10 +3,12 @@
 package log4go
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 )
 
 var (
@@ -409,4 +411,17 @@ func CriticalLog(logname string, arg0 interface{}, args ...interface{}) error {
 		return errors.New(fmt.Sprint(first) + fmt.Sprintf(strings.Repeat(" %v", len(args)), args...))
 	}
 	return nil
+}
+
+// 第一版试一下
+// 接收 map[string]string类型的数据
+// 我们会添加一些 __开头的 k，比如 topic ，然后把他转换成json写到文件中
+func EventLog(topic string, kv map[string]interface{}) {
+	kv["__topic__"] = topic
+	kv["__timestamp__"] = time.Now().Unix()
+	rawJson, err := json.Marshal(kv)
+	if err != nil {
+		ErrorLog("stderr", "EventLog|Marshal kv|topic: %s, kv: %+v, err: %s", topic, kv, err)
+	}
+	Global.intLogNamef("event", INFO, "%s", string(rawJson)) // 固定输出到 event 文件
 }
