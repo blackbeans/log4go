@@ -1,7 +1,7 @@
 Please see http://log4go.googlecode.com/
 
 Installation:
-- Run `goinstall log4go.googlecode.com/hg`
+- Run `go install log4go.googlecode.com/hg`
 
 Usage:
 - Add the following import:
